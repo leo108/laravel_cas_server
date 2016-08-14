@@ -1,0 +1,21 @@
+{
+    "name": "leo108/laravel_cas_server",
+    "description": "A laravel package provides CAS server implementation",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "leo108",
+            "email": "leo108@qq.com"
+        }
+    ],
+    "require": {
+        "arvenil/ninja-mutex": "^0.5.1",
+        "laravel/framework": "5.2.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Leo108\\CAS\\": "src"
+        }
+    }
+}
