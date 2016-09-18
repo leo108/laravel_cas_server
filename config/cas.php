@@ -6,6 +6,7 @@ return [
     'ticket_len'    => env('CAS_TICKET_LEN', 32),
     'user_table'    => [
         'id'    => 'id',
+        'name'  => 'users',
         'model' => \App\User::class, //change to your user model class
     ],
     'router'        => [
@@ -16,5 +17,4 @@ return [
         'common' => 'web',
         'auth'   => 'auth',
     ],
-    'elixir'        => false,
 ];

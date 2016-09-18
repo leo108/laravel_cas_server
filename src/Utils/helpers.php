@@ -15,7 +15,7 @@ if (!function_exists('cas_route')) {
      */
     function cas_route($name, $parameters = [], $absolute = true)
     {
-        $name = config('cas.router.prefix').'_'.$name;
+        $name = config('cas.router.name_prefix').$name;
 
         return route($name, $parameters, $absolute);
     }
