@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ticket extends Model
 {
-    protected $table = 'cas_ticket';
+    protected $table = 'cas_tickets';
     public $timestamps = false;
     protected $fillable = ['ticket', 'service_url', 'expire_at', 'created_at'];
 

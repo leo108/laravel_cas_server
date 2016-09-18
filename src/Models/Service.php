@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Service extends Model
 {
-    protected $table = 'cas_service';
+    protected $table = 'cas_services';
     protected $fillable = ['name', 'enabled'];
     protected $casts = [
         'enabled'    => 'boolean',

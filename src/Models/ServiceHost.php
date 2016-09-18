@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ServiceHost extends Model
 {
-    protected $table = 'cas_service_host';
+    protected $table = 'cas_service_hosts';
     public $timestamps = false;
     protected $fillable = ['host'];
 
