@@ -35,8 +35,6 @@ class CASServerServiceProvider extends ServiceProvider
             require __DIR__.'/Http/routes.php';
         }
 
-        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'cas');
-
         $this->publishes(
             [
                 __DIR__.'/../config/cas.php' => config_path('cas.php'),
