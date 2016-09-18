@@ -50,8 +50,8 @@ interface UserLogin
 
     /**
      * @param Request  $request
-     * @param callable $loggedOut
+     * @param callable $beforeLogout
      * @return Response
      */
-    public function logout(Request $request, callable $loggedOut);
+    public function logout(Request $request, callable $beforeLogout);
 }
