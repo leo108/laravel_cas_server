@@ -10,6 +10,7 @@ namespace Leo108\CAS\Http\Controllers;
 
 use Leo108\CAS\Contracts\Interactions\UserLogin;
 use Leo108\CAS\Events\CasUserLoginEvent;
+use Leo108\CAS\Events\CasUserLogoutEvent;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Illuminate\Http\Request;
 use Leo108\CAS\Repositories\ServiceRepository;
@@ -80,7 +81,7 @@ class SecurityController extends Controller
 
     public function login(Request $request)
     {
-        return $this->loginInteraction->handle($request, array($this, 'authenticated'));
+        return $this->loginInteraction->login($request, array($this, 'authenticated'));
     }
 
     public function authenticated(Request $request)
@@ -101,5 +102,15 @@ class SecurityController extends Controller
         }
 
         return $this->loginInteraction->redirectToHome();
+    }
+
+    public function logout(Request $request)
+    {
+        return $this->loginInteraction->logout(
+            $request,
+            function (Request $request) {
+                event(new CasUserLogoutEvent($request, $this->loginInteraction->getCurrentUser($request)));
+            }
+        );
     }
 }

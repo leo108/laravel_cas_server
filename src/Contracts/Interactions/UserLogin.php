@@ -19,7 +19,7 @@ interface UserLogin
      * @param callable $authenticated
      * @return Response
      */
-    public function handle(Request $request, callable $authenticated);
+    public function login(Request $request, callable $authenticated);
 
     /**
      * @param Request $request
@@ -47,4 +47,11 @@ interface UserLogin
      * @return Response
      */
     public function redirectToHome(array $errors = []);
+
+    /**
+     * @param Request  $request
+     * @param callable $loggedOut
+     * @return Response
+     */
+    public function logout(Request $request, callable $loggedOut);
 }

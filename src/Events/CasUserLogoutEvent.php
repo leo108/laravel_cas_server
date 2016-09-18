@@ -1,4 +1,10 @@
 <?php
+/**
+ * Created by PhpStorm.
+ * User: leo108
+ * Date: 16/9/18
+ * Time: 11:28
+ */
 
 namespace Leo108\CAS\Events;
 
@@ -6,10 +12,9 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
 
-class CasUserLoginEvent extends Event
+class CasUserLogoutEvent extends Event
 {
     use SerializesModels;
-
     /**
      * @var Request
      */
