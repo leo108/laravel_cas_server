@@ -10,7 +10,6 @@
         }
     ],
     "require": {
-        "arvenil/ninja-mutex": "^0.5.1",
         "laravel/framework": "5.2.*"
     },
     "autoload": {

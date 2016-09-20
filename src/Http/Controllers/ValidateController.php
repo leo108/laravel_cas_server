@@ -8,6 +8,7 @@
 
 namespace Leo108\CAS\Http\Controllers;
 
+use Leo108\CAS\Contracts\TicketLocker;
 use Leo108\CAS\Repositories\TicketRepository;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
@@ -17,6 +18,10 @@ use Illuminate\Http\Response;
 class ValidateController extends Controller
 {
     /**
+     * @var TicketLocker
+     */
+    protected $ticketLocker;
+    /**
      * @var TicketRepository
      */
     protected $ticketRepository;
@@ -25,10 +30,12 @@ class ValidateController extends Controller
 
     /**
      * ValidateController constructor.
+     * @param TicketLocker     $ticketLocker
      * @param TicketRepository $ticketRepository
      */
-    public function __construct(TicketRepository $ticketRepository)
+    public function __construct(TicketLocker $ticketLocker, TicketRepository $ticketRepository)
     {
+        $this->ticketLocker     = $ticketLocker;
         $this->ticketRepository = $ticketRepository;
     }
 
@@ -187,7 +194,7 @@ class ValidateController extends Controller
      */
     protected function lockTicket($ticket)
     {
-        return \App::make('locker')->acquireLock($ticket, config('cas.lock_timeout'));
+        return $this->ticketLocker->acquireLock($ticket, config('cas.lock_timeout'));
     }
 
     /**
@@ -196,7 +203,7 @@ class ValidateController extends Controller
      */
     protected function unlockTicket($ticket)
     {
-        return \App::make('locker')->releaseLock($ticket);
+        return $this->ticketLocker->releaseLock($ticket);
     }
 
     /**
