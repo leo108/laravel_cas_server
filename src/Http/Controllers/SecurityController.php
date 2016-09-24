@@ -64,6 +64,11 @@ class SecurityController extends Controller
         $user = $this->loginInteraction->getCurrentUser($request);
         //user already has sso session
         if ($user) {
+            //has errors, should not be redirected to target url
+            if (!empty($errors)) {
+                return $this->loginInteraction->redirectToHome($errors);
+            }
+
             //must not be transparent
             if ($request->get('warn') === 'true' && !empty($service)) {
                 $query = $request->query->all();
