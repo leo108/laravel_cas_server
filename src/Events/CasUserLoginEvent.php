@@ -2,9 +2,9 @@
 
 namespace Leo108\CAS\Events;
 
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
+use Leo108\CAS\Contracts\Models\UserModel;
 
 class CasUserLoginEvent extends Event
 {
@@ -15,16 +15,16 @@ class CasUserLoginEvent extends Event
      */
     protected $request;
     /**
-     * @var Authenticatable
+     * @var UserModel
      */
     protected $user;
 
     /**
      * CasUserLoginEvent constructor.
-     * @param Request         $request
-     * @param Authenticatable $user
+     * @param Request   $request
+     * @param UserModel $user
      */
-    public function __construct(Request $request, Authenticatable $user)
+    public function __construct(Request $request, UserModel $user)
     {
         $this->request = $request;
         $this->user    = $user;
@@ -49,7 +49,7 @@ class CasUserLoginEvent extends Event
     }
 
     /**
-     * @return Authenticatable
+     * @return UserModel
      */
     public function getUser()
     {

@@ -49,7 +49,6 @@ class SecurityController extends Controller
         $this->loginInteraction  = $loginInteraction;
     }
 
-
     public function showLogin(Request $request)
     {
         $service = $request->get('service', '');
@@ -73,7 +72,7 @@ class SecurityController extends Controller
             if ($request->get('warn') === 'true' && !empty($service)) {
                 $query = $request->query->all();
                 unset($query['warn']);
-                $url = cas_route('login_action', $query);
+                $url = cas_route('login_page', $query);
 
                 return $this->loginInteraction->showLoginWarnPage($request, $url, $service);
             }

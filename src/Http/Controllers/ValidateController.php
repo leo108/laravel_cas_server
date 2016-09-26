@@ -14,6 +14,7 @@ use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use SimpleXMLElement;
 
 class ValidateController extends Controller
 {
@@ -114,18 +115,15 @@ class ValidateController extends Controller
         $this->ticketRepository->invalidTicket($record);
         $this->unlockTicket($ticket);
 
-        $attr = $returnAttr ? [
-            'email'    => $record->user->email,
-            'realName' => $record->user->real_name,
-        ] : [];
+        $attr = $returnAttr ? $record->user->getAttributes() : [];
 
-        return $this->successResponse($record->user->name, $attr, $format);
+        return $this->successResponse($record->user->getName(), $attr, $format);
     }
 
     /**
-     * @param $username
-     * @param $attrs
-     * @param $format
+     * @param string $username
+     * @param array  $attrs
+     * @param string $format
      * @return Response
      */
     protected function successResponse($username, $attrs, $format)
@@ -161,9 +159,9 @@ class ValidateController extends Controller
     }
 
     /**
-     * @param $code
-     * @param $desc
-     * @param $format
+     * @param string $code
+     * @param string $desc
+     * @param string $format
      * @return Response
      */
     protected function failureResponse($code, $desc, $format)
@@ -222,10 +220,10 @@ class ValidateController extends Controller
     }
 
     /**
-     * @param \SimpleXMLElement $xml
+     * @param SimpleXMLElement $xml
      * @return Response
      */
-    protected function returnXML(\SimpleXMLElement $xml)
+    protected function returnXML(SimpleXMLElement $xml)
     {
         return new Response($this->removeXmlFirstLine($xml->asXML()), 200, array('Content-Type' => 'application/xml'));
     }

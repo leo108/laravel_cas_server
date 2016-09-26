@@ -9,7 +9,7 @@
 namespace Leo108\CAS\Repositories;
 
 use Carbon\Carbon;
-use Illuminate\Contracts\Auth\Authenticatable;
+use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
 
@@ -38,12 +38,12 @@ class TicketRepository
 
 
     /**
-     * @param Authenticatable $user
-     * @param string          $serviceUrl
+     * @param UserModel $user
+     * @param string    $serviceUrl
      * @throws CasException
      * @return \Leo108\CAS\Models\Ticket
      */
-    public function applyTicket(Authenticatable $user, $serviceUrl)
+    public function applyTicket(UserModel $user, $serviceUrl)
     {
         $service = $this->serviceRepository->getServiceByUrl($serviceUrl);
         if (!$service) {
@@ -61,7 +61,7 @@ class TicketRepository
                 'service_url' => $serviceUrl,
             ]
         );
-        $record->user()->associate($user);
+        $record->user()->associate($user->getEloquentModel());
         $record->service()->associate($service);
         $record->save();
 
