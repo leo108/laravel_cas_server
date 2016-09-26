@@ -20,7 +20,7 @@ interface UserModel
     /**
      * @return array
      */
-    public function getAttributes();
+    public function getCASAttributes();
 
     /**
      * @return Model
