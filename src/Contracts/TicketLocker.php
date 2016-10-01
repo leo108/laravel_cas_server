@@ -20,7 +20,7 @@ interface TicketLocker
 
     /**
      * @param string $key
-     * @return int
+     * @return bool
      */
     public function releaseLock($key);
 }

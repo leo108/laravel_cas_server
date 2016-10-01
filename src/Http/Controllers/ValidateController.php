@@ -115,7 +115,7 @@ class ValidateController extends Controller
         $this->ticketRepository->invalidTicket($record);
         $this->unlockTicket($ticket);
 
-        $attr = $returnAttr ? $record->user->getAttributes() : [];
+        $attr = $returnAttr ? $record->user->getCASAttributes() : [];
 
         return $this->successResponse($record->user->getName(), $attr, $format);
     }

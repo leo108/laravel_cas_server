@@ -15,7 +15,7 @@ class Service extends Model
     protected $table = 'cas_services';
     protected $fillable = ['name', 'enabled'];
     protected $casts = [
-        'enabled'    => 'boolean',
+        'enabled' => 'boolean',
     ];
 
     public function hosts()
