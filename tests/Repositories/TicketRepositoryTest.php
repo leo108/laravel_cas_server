@@ -5,14 +5,12 @@
  * Date: 2016/9/29
  * Time: 09:53
  */
-namespace Repositories;
+namespace Leo108\CAS\Repositories;
 
 use Exception;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Service;
 use Leo108\CAS\Models\Ticket;
-use Leo108\CAS\Repositories\ServiceRepository;
-use Leo108\CAS\Repositories\TicketRepository;
 use Mockery;
 use ReflectionClass;
 use TestCase;

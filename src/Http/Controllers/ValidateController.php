@@ -8,6 +8,7 @@
 
 namespace Leo108\CAS\Http\Controllers;
 
+use Illuminate\Support\Str;
 use Leo108\CAS\Contracts\TicketLocker;
 use Leo108\CAS\Repositories\TicketRepository;
 use Leo108\CAS\Exceptions\CAS\CasException;
@@ -212,7 +213,7 @@ class ValidateController extends Controller
     protected function removeXmlFirstLine($str)
     {
         $first = '<?xml version="1.0"?>';
-        if (stripos($str, $first) === 0) {
+        if (Str::startsWith($str, $first)) {
             return trim(substr($str, strlen($first)));
         }
 

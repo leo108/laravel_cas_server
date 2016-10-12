@@ -1,13 +1,11 @@
 <?php
 
-namespace Repositories;
+namespace Leo108\CAS\Repositories;
 
 use Mockery;
 use TestCase;
-use Illuminate\Database\Eloquent\Collection;
 use Leo108\CAS\Models\Service;
 use Leo108\CAS\Models\ServiceHost;
-use Leo108\CAS\Repositories\ServiceRepository;
 
 /**
  * Created by PhpStorm.
