@@ -25,3 +25,7 @@ Currently this package works for Laravel 5.1/5.2/5.3 .
 - create a class implements `Leo108\CAS\Contracts\TicketLocker`
 - create a class implements `Leo108\CAS\Contracts\Interactions\UserLogin`
 - visit `http://your-domain/cas/login` to see the login page (assume that you didn't change the `router.prefix` value in `config/cas.php`)
+
+## Example
+
+If you are looking for an out of box solution of CAS Server powered by PHP, you can refer to [php_cas_server](https://github.com/leo108/php_cas_server)

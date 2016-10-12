@@ -91,6 +91,13 @@ class SecurityController extends Controller
     public function authenticated(Request $request)
     {
         $user = $this->loginInteraction->getCurrentUser($request);
+        if ($user === null) {
+            //unreachable code
+            throw new CasException(
+                CasException::INTERNAL_ERROR,
+                'should call authenticated only after getCurrentUser return not null'
+            );
+        }
         event(new CasUserLoginEvent($request, $user));
         $serviceUrl = $request->get('service', '');
         if (!empty($serviceUrl)) {

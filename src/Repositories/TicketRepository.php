@@ -50,7 +50,7 @@ class TicketRepository
             throw new CasException(CasException::INVALID_SERVICE);
         }
         $ticket = $this->getAvailableTicket(config('cas.ticket_len', 32));
-        if (!$ticket) {
+        if ($ticket === false) {
             throw new CasException(CasException::INTERNAL_ERROR, 'apply ticket failed');
         }
         $record = $this->ticket->newInstance(
