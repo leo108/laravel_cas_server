@@ -11,12 +11,7 @@
     ],
     "require": {
         "php": ">=5.5.9",
-        "illuminate/support": "5.1.*|5.2.*|5.3.*",
-        "illuminate/database": "5.1.*|5.2.*|5.3.*",
-        "illuminate/foundation": "5.1.*|5.2.*|5.3.*",
-        "illuminate/routing": "5.1.*|5.2.*|5.3.*",
-        "illuminate/queue": "5.1.*|5.2.*|5.3.*",
-        "illuminate/http": "5.1.*|5.2.*|5.3.*"
+        "laravel/framework": "5.1.*|5.2.*|5.3.*"
     },
     "require-dev": {
         "mockery/mockery": "0.9.*",
