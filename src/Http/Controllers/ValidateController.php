@@ -151,7 +151,21 @@ class ValidateController extends Controller
             if (!empty($attrs)) {
                 $childAttrs = $childSuccess->addChild('cas:attributes');
                 foreach ($attrs as $key => $value) {
-                    $childAttrs->addChild('cas:'.$key, $value);
+                    if (is_string($value)) {
+                        $str = $value;
+                    } else if (is_object($value) && method_exists($value, '__toString')) {
+                        $str = $value->__toString();
+                    } else if ($value instanceof \Serializable) {
+                        $str = serialize($value);
+                    } else {
+                        //array or object that doesn't have __toString method
+                        //json_encode will return false if encode failed
+                        $str = json_encode($value);
+                    }
+
+                    if (is_string($str)) {
+                        $childAttrs->addChild('cas:'.$key, $str);
+                    }
                 }
             }
 

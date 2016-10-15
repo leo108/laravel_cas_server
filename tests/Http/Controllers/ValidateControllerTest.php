@@ -15,16 +15,25 @@ use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
 use Leo108\CAS\Repositories\TicketRepository;
 use ReflectionClass;
+use SerializableModel;
 use SimpleXMLElement;
 use TestCase;
 use Mockery;
 use User;
 
+function method_exists($obj, $method)
+{
+    return ValidateControllerTest::$functions->method_exists($obj, $method);
+}
+
 class ValidateControllerTest extends TestCase
 {
+    public static $functions;
+
     public function setUp()
     {
         parent::setUp();
+        self::$functions = Mockery::mock();
         app()->instance(TicketLocker::class, Mockery::mock(TicketLocker::class));
     }
 
@@ -386,12 +395,29 @@ class ValidateControllerTest extends TestCase
         $method     = self::getMethod($controller, 'successResponse');
         $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['test_name', [], 'XML']));
 
+        $objWithToString = Mockery::mock()->shouldReceive('__toString')->andReturn('string from __toString');
+        self::$functions
+            ->shouldReceive('method_exists')
+            ->with($objWithToString, '__toString')
+            ->andReturn(true)
+            ->shouldReceive('method_exists')
+            ->andReturn(false);
+
+        $attributes = [
+            'string'             => 'real_name',
+            'simple_array'       => [1, 2, 3],
+            'kv_array'           => ['key' => 'value'],
+            'simple_object'      => (object) ['key' => 'value'],
+            'obj_with_to_string' => $objWithToString,
+            'serializable'       => new SerializableModel(),
+            'resource'           => fopen(__FILE__, 'a'),
+        ];
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('returnXML')
             ->andReturnUsing(
-                function ($xml) {
+                function ($xml) use ($attributes) {
                     $this->assertInstanceOf(SimpleXMLElement::class, $xml);
                     /* @var SimpleXMLElement $xml */
                     $children = $xml->xpath('cas:authenticationSuccess');
@@ -401,19 +427,40 @@ class ValidateControllerTest extends TestCase
                     $this->assertEquals('test_name', $user[0]->__toString());
                     $attr = $children[0]->xpath('cas:attributes');
                     $this->assertCount(1, $attr);
-                    $rn = $attr[0]->xpath('cas:real_name');
-                    $this->assertCount(1, $rn);
-                    $this->assertEquals('real_name', $rn[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:string');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals($attributes['string'], $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:simple_array');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals(json_encode($attributes['simple_array']), $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:kv_array');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals(json_encode($attributes['kv_array']), $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:simple_object');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals(json_encode($attributes['simple_object']), $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:obj_with_to_string');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals($attributes['obj_with_to_string']->__toString(), $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:serializable');
+                    $this->assertCount(1, $str);
+                    $this->assertEquals(serialize($attributes['serializable']), $str[0]->__toString());
+
+                    $str = $attr[0]->xpath('cas:resource');
+                    $this->assertCount(0, $str);
 
                     return 'returnXML called';
                 }
             )
             ->getMock();
         $method     = self::getMethod($controller, 'successResponse');
-        $this->assertEquals(
-            'returnXML called',
-            $method->invokeArgs($controller, ['test_name', ['real_name' => 'real_name'], 'XML'])
-        );
+        $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['test_name', $attributes, 'XML',]));
     }
 
     public function testFailureResponse()
@@ -455,6 +502,35 @@ class ValidateControllerTest extends TestCase
             ->getMock();
         $method     = self::getMethod($controller, 'failureResponse');
         $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['code', 'desc', 'XML']));
+    }
+
+    public function testRemoveXmlFirstLine()
+    {
+        $xml        = new SimpleXMLElement(ValidateController::BASE_XML);
+        $controller = Mockery::mock(ValidateController::class);
+        $method     = self::getMethod($controller, 'removeXmlFirstLine');
+        $this->assertNotContains('<?xml version="1.0"?>', $method->invoke($controller, $xml->asXML()));
+
+        $normalStr = 'some string';
+        $this->assertEquals($normalStr, $method->invoke($controller, $normalStr));
+    }
+
+    public function testReturnXML()
+    {
+        $xml        = new SimpleXMLElement(ValidateController::BASE_XML);
+        $controller = Mockery::mock(ValidateController::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods()
+            ->shouldReceive('removeXmlFirstLine')
+            ->andReturn('parsed string')
+            ->getMock();
+
+        $method = self::getMethod($controller, 'returnXML');
+        $resp   = $method->invoke($controller, $xml);
+        $this->assertInstanceOf(Response::class, $resp);
+        $this->assertEquals(200, $resp->getStatusCode());
+        $this->assertTrue($resp->headers->has('Content-Type'));
+        $this->assertEquals('application/xml', $resp->headers->get('Content-Type'));
     }
 
     protected static function getMethod($obj, $name)
