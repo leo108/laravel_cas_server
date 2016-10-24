@@ -18,9 +18,7 @@ trait XmlResponse
      */
     protected function getRootNode()
     {
-        $str = '<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>';
-
-        return simplexml_load_string($str);
+        return simplexml_load_string('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
     }
 
     /**
@@ -29,8 +27,11 @@ trait XmlResponse
      */
     protected function removeByXPath(SimpleXMLElement $xml, $xpath)
     {
-        $node = $xml->xpath($xpath);
-        unset($node[0]->{0});
+        $nodes = $xml->xpath($xpath);
+        foreach ($nodes as $node) {
+            $dom = dom_import_simplexml($node);
+            $dom->parentNode->removeChild($dom);
+        }
     }
 
     /**
