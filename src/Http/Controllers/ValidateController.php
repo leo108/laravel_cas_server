@@ -15,6 +15,10 @@ use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Leo108\CAS\Responses\JsonAuthenticationFailureResponse;
+use Leo108\CAS\Responses\JsonAuthenticationSuccessResponse;
+use Leo108\CAS\Responses\XmlAuthenticationFailureResponse;
+use Leo108\CAS\Responses\XmlAuthenticationSuccessResponse;
 use SimpleXMLElement;
 
 class ValidateController extends Controller
@@ -118,87 +122,55 @@ class ValidateController extends Controller
 
         $attr = $returnAttr ? $record->user->getCASAttributes() : [];
 
-        return $this->successResponse($record->user->getName(), $attr, $format);
+        return $this->successResponse($record->user->getName(), $format, $attr);
     }
 
     /**
-     * @param string $username
-     * @param array  $attrs
-     * @param string $format
+     * @param string      $username
+     * @param string      $format
+     * @param array       $attributes
+     * @param array       $proxies
+     * @param string|null $pgt
      * @return Response
      */
-    protected function successResponse($username, $attrs, $format)
+    protected function successResponse($username, $format, $attributes, $proxies = [], $pgt = null)
     {
         if (strtoupper($format) === 'JSON') {
-            $data = [
-                'serviceResponse' => [
-                    'authenticationSuccess' => [
-                        'user' => $username,
-                    ],
-                ],
-            ];
-
-            if (!empty($attrs)) {
-                $data['serviceResponse']['authenticationSuccess']['attributes'] = $attrs;
-            }
-
-            return new Response($data);
+            $resp = app(JsonAuthenticationSuccessResponse::class);
         } else {
-            $xml          = simplexml_load_string(self::BASE_XML);
-            $childSuccess = $xml->addChild('cas:authenticationSuccess');
-            $childSuccess->addChild('cas:user', $username);
-
-            if (!empty($attrs)) {
-                $childAttrs = $childSuccess->addChild('cas:attributes');
-                foreach ($attrs as $key => $value) {
-                    if (is_string($value)) {
-                        $str = $value;
-                    } else if (is_object($value) && method_exists($value, '__toString')) {
-                        $str = $value->__toString();
-                    } else if ($value instanceof \Serializable) {
-                        $str = serialize($value);
-                    } else {
-                        //array or object that doesn't have __toString method
-                        //json_encode will return false if encode failed
-                        $str = json_encode($value);
-                    }
-
-                    if (is_string($str)) {
-                        $childAttrs->addChild('cas:'.$key, $str);
-                    }
-                }
-            }
-
-            return $this->returnXML($xml);
+            $resp = app(XmlAuthenticationSuccessResponse::class);
         }
+        $resp->setUser($username);
+        if (!empty($attributes)) {
+            $resp->setAttributes($attributes);
+        }
+        if (!empty($proxies)) {
+            $resp->setProxies($proxies);
+        }
+
+        if (is_string($pgt)) {
+            $resp->setProxyGrantingTicket($pgt);
+        }
+
+        return $resp->toResponse();
     }
 
     /**
      * @param string $code
-     * @param string $desc
+     * @param string $description
      * @param string $format
      * @return Response
      */
-    protected function failureResponse($code, $desc, $format)
+    protected function failureResponse($code, $description, $format)
     {
         if (strtoupper($format) === 'JSON') {
-            return new Response(
-                [
-                    'serviceResponse' => [
-                        'authenticationFailure' => [
-                            'code'        => $code,
-                            'description' => $desc,
-                        ],
-                    ],
-                ]
-            );
+            $resp = app(JsonAuthenticationFailureResponse::class);
         } else {
-            $xml          = simplexml_load_string(self::BASE_XML);
-            $childFailure = $xml->addChild('cas:authenticationFailure', $desc);
-            $childFailure->addAttribute('code', $code);
-
-            return $this->returnXML($xml);
+            $resp = app(XmlAuthenticationFailureResponse::class);
         }
+        $resp->setFailure($code, $description);
+
+        return $resp->toResponse();
     }
 
     /**
@@ -217,29 +189,5 @@ class ValidateController extends Controller
     protected function unlockTicket($ticket)
     {
         return $this->ticketLocker->releaseLock($ticket);
-    }
-
-    /**
-     * remove the first line of xml string
-     * @param string $str
-     * @return string
-     */
-    protected function removeXmlFirstLine($str)
-    {
-        $first = '<?xml version="1.0"?>';
-        if (Str::startsWith($str, $first)) {
-            return trim(substr($str, strlen($first)));
-        }
-
-        return $str;
-    }
-
-    /**
-     * @param SimpleXMLElement $xml
-     * @return Response
-     */
-    protected function returnXML(SimpleXMLElement $xml)
-    {
-        return new Response($this->removeXmlFirstLine($xml->asXML()), 200, array('Content-Type' => 'application/xml'));
     }
 }

@@ -14,7 +14,10 @@ use Leo108\CAS\Contracts\TicketLocker;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
 use Leo108\CAS\Repositories\TicketRepository;
-use ReflectionClass;
+use Leo108\CAS\Responses\JsonAuthenticationFailureResponse;
+use Leo108\CAS\Responses\JsonAuthenticationSuccessResponse;
+use Leo108\CAS\Responses\XmlAuthenticationFailureResponse;
+use Leo108\CAS\Responses\XmlAuthenticationSuccessResponse;
 use SerializableModel;
 use SimpleXMLElement;
 use TestCase;
@@ -301,9 +304,9 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->shouldReceive('successResponse')
             ->andReturnUsing(
-                function ($name, $attr, $format) {
+                function ($name, $format, $attributes) {
                     $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attr);
+                    $this->assertEmpty($attributes);
                     $this->assertEquals('JSON', $format);
 
                     return 'successResponse called';
@@ -345,122 +348,47 @@ class ValidateControllerTest extends TestCase
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial();
         $method     = self::getMethod($controller, 'successResponse');
-        $resp       = $method->invokeArgs($controller, ['test_name', [], 'JSON']);
 
-        $this->assertInstanceOf(Response::class, $resp);
-        $this->assertEquals(
-            [
-                'serviceResponse' => [
-                    'authenticationSuccess' => [
-                        'user' => 'test_name',
-                    ],
-                ],
-            ],
-            $resp->getOriginalContent()
-        );
-
-        $resp = $method->invokeArgs($controller, ['test_name', ['real_name' => 'real_name'], 'JSON']);
-
-        $this->assertInstanceOf(Response::class, $resp);
-        $this->assertEquals(
-            [
-                'serviceResponse' => [
-                    'authenticationSuccess' => [
-                        'user'       => 'test_name',
-                        'attributes' => ['real_name' => 'real_name'],
-                    ],
-                ],
-            ],
-            $resp->getOriginalContent()
-        );
-
-        $controller = Mockery::mock(ValidateController::class)
-            ->makePartial()
-            ->shouldAllowMockingProtectedMethods()
-            ->shouldReceive('returnXML')
-            ->andReturnUsing(
-                function ($xml) {
-                    $this->assertInstanceOf(SimpleXMLElement::class, $xml);
-                    /* @var SimpleXMLElement $xml */
-                    $children = $xml->xpath('cas:authenticationSuccess');
-                    $this->assertCount(1, $children);
-                    $children = $children[0]->xpath('cas:user');
-                    $this->assertCount(1, $children);
-                    $this->assertEquals('test_name', $children[0]->__toString());
-
-                    return 'returnXML called';
-                }
-            )
-            ->getMock();
-        $method     = self::getMethod($controller, 'successResponse');
-        $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['test_name', [], 'XML']));
-
-        $objWithToString = Mockery::mock()->shouldReceive('__toString')->andReturn('string from __toString');
-        self::$functions
-            ->shouldReceive('method_exists')
-            ->with($objWithToString, '__toString')
-            ->andReturn(true)
-            ->shouldReceive('method_exists')
-            ->andReturn(false);
-
+        $name       = 'test_name';
         $attributes = [
-            'string'             => 'real_name',
-            'simple_array'       => [1, 2, 3],
-            'kv_array'           => ['key' => 'value'],
-            'simple_object'      => (object) ['key' => 'value'],
-            'obj_with_to_string' => $objWithToString,
-            'serializable'       => new SerializableModel(),
-            'resource'           => fopen(__FILE__, 'a'),
+            'real_name' => 'real_name',
         ];
-        $controller = Mockery::mock(ValidateController::class)
-            ->makePartial()
-            ->shouldAllowMockingProtectedMethods()
-            ->shouldReceive('returnXML')
-            ->andReturnUsing(
-                function ($xml) use ($attributes) {
-                    $this->assertInstanceOf(SimpleXMLElement::class, $xml);
-                    /* @var SimpleXMLElement $xml */
-                    $children = $xml->xpath('cas:authenticationSuccess');
-                    $this->assertCount(1, $children);
-                    $user = $children[0]->xpath('cas:user');
-                    $this->assertCount(1, $user);
-                    $this->assertEquals('test_name', $user[0]->__toString());
-                    $attr = $children[0]->xpath('cas:attributes');
-                    $this->assertCount(1, $attr);
-
-                    $str = $attr[0]->xpath('cas:string');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals($attributes['string'], $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:simple_array');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals(json_encode($attributes['simple_array']), $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:kv_array');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals(json_encode($attributes['kv_array']), $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:simple_object');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals(json_encode($attributes['simple_object']), $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:obj_with_to_string');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals($attributes['obj_with_to_string']->__toString(), $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:serializable');
-                    $this->assertCount(1, $str);
-                    $this->assertEquals(serialize($attributes['serializable']), $str[0]->__toString());
-
-                    $str = $attr[0]->xpath('cas:resource');
-                    $this->assertCount(0, $str);
-
-                    return 'returnXML called';
-                }
-            )
+        $proxies    = ['http://proxy1.com'];
+        $pgt        = 'ticket';
+        $jsonResp   = Mockery::mock(JsonAuthenticationSuccessResponse::class)
+            ->shouldReceive('setUser')
+            ->with($name)
+            ->once()
+            ->shouldReceive('setAttributes')
+            ->with($attributes)
+            ->once()
+            ->shouldReceive('setProxies')
+            ->with($proxies)
+            ->once()
+            ->shouldReceive('toResponse')
+            ->once()
             ->getMock();
-        $method     = self::getMethod($controller, 'successResponse');
-        $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['test_name', $attributes, 'XML',]));
+        app()->instance(JsonAuthenticationSuccessResponse::class, $jsonResp);
+        $method->invokeArgs($controller, ['test_name', 'JSON', $attributes, $proxies, []]);
+
+        $xmlResp = Mockery::mock(XmlAuthenticationSuccessResponse::class)
+            ->shouldReceive('setUser')
+            ->with($name)
+            ->once()
+            ->shouldReceive('setAttributes')
+            ->with($attributes)
+            ->once()
+            ->shouldReceive('setProxies')
+            ->with($proxies)
+            ->once()
+            ->shouldReceive('setProxyGrantingTicket')
+            ->with($pgt)
+            ->once()
+            ->shouldReceive('toResponse')
+            ->once()
+            ->getMock();
+        app()->instance(XmlAuthenticationSuccessResponse::class, $xmlResp);
+        $method->invokeArgs($controller, ['test_name', 'XML', $attributes, $proxies, $pgt]);
     }
 
     public function testFailureResponse()
@@ -468,78 +396,27 @@ class ValidateControllerTest extends TestCase
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial();
         $method     = self::getMethod($controller, 'failureResponse');
-        $resp       = $method->invokeArgs($controller, ['code', 'desc', 'JSON']);
-
-        $this->assertInstanceOf(Response::class, $resp);
-        $this->assertEquals(
-            [
-                'serviceResponse' => [
-                    'authenticationFailure' => [
-                        'code'        => 'code',
-                        'description' => 'desc',
-                    ],
-                ],
-            ],
-            $resp->getOriginalContent()
-        );
-
-        $controller = Mockery::mock(ValidateController::class)
-            ->makePartial()
-            ->shouldAllowMockingProtectedMethods()
-            ->shouldReceive('returnXML')
-            ->andReturnUsing(
-                function ($xml) {
-                    $this->assertInstanceOf(SimpleXMLElement::class, $xml);
-                    /* @var SimpleXMLElement $xml */
-                    $children = $xml->xpath('cas:authenticationFailure');
-                    $this->assertCount(1, $children);
-                    $this->assertEquals('desc', $children[0]->__toString());
-                    $this->assertEquals('code', $children[0]['code']);
-
-                    return 'returnXML called';
-                }
-            )
+        $code       = 'code';
+        $desc       = 'desc';
+        $jsonResp   = Mockery::mock(JsonAuthenticationFailureResponse::class)
+            ->shouldReceive('setFailure')
+            ->withArgs([$code, $desc])
+            ->once()
+            ->shouldReceive('toResponse')
+            ->once()
             ->getMock();
-        $method     = self::getMethod($controller, 'failureResponse');
-        $this->assertEquals('returnXML called', $method->invokeArgs($controller, ['code', 'desc', 'XML']));
-    }
+        app()->instance(JsonAuthenticationFailureResponse::class, $jsonResp);
+        $method->invokeArgs($controller, [$code, $desc, 'JSON']);
 
-    public function testRemoveXmlFirstLine()
-    {
-        $xml        = new SimpleXMLElement(ValidateController::BASE_XML);
-        $controller = Mockery::mock(ValidateController::class);
-        $method     = self::getMethod($controller, 'removeXmlFirstLine');
-        $this->assertNotContains('<?xml version="1.0"?>', $method->invoke($controller, $xml->asXML()));
-
-        $normalStr = 'some string';
-        $this->assertEquals($normalStr, $method->invoke($controller, $normalStr));
-    }
-
-    public function testReturnXML()
-    {
-        $xml        = new SimpleXMLElement(ValidateController::BASE_XML);
-        $controller = Mockery::mock(ValidateController::class)
-            ->makePartial()
-            ->shouldAllowMockingProtectedMethods()
-            ->shouldReceive('removeXmlFirstLine')
-            ->andReturn('parsed string')
+        $xmlResp = Mockery::mock(XmlAuthenticationFailureResponse::class)
+            ->shouldReceive('setFailure')
+            ->withArgs([$code, $desc])
+            ->once()
+            ->shouldReceive('toResponse')
+            ->once()
             ->getMock();
-
-        $method = self::getMethod($controller, 'returnXML');
-        $resp   = $method->invoke($controller, $xml);
-        $this->assertInstanceOf(Response::class, $resp);
-        $this->assertEquals(200, $resp->getStatusCode());
-        $this->assertTrue($resp->headers->has('Content-Type'));
-        $this->assertEquals('application/xml', $resp->headers->get('Content-Type'));
-    }
-
-    protected static function getMethod($obj, $name)
-    {
-        $class  = new ReflectionClass($obj);
-        $method = $class->getMethod($name);
-        $method->setAccessible(true);
-
-        return $method;
+        app()->instance(XmlAuthenticationFailureResponse::class, $xmlResp);
+        $method->invokeArgs($controller, [$code, $desc, 'XML']);
     }
 
     protected function getValidRequest()
@@ -555,12 +432,5 @@ class ValidateControllerTest extends TestCase
             ->withArgs(['format', 'XML'])
             ->andReturn('JSON')
             ->getMock();
-    }
-
-    protected function prepareCASXml(SimpleXMLElement $xml)
-    {
-        $xml->registerXPathNamespace('cas', 'http://www.yale.edu/tp/cas');
-
-        return $xml;
     }
 }

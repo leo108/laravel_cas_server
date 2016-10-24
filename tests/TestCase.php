@@ -76,4 +76,13 @@ class TestCase extends Illuminate\Foundation\Testing\TestCase
         $migrationClass = $classFinder->findClass($usersMigrationFile);
         (new $migrationClass())->up();
     }
+
+    protected static function getMethod($obj, $name)
+    {
+        $class  = new ReflectionClass($obj);
+        $method = $class->getMethod($name);
+        $method->setAccessible(true);
+
+        return $method;
+    }
 }
