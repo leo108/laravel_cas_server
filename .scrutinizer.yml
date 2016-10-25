@@ -11,3 +11,7 @@ build:
         coverage:
             file: '.coverage.xml'
             format: 'clover'
+filter:
+  excluded_paths:
+    - "database/"
+    - "config/"
