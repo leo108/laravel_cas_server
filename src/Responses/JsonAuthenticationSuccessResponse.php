@@ -8,16 +8,10 @@
 
 namespace Leo108\CAS\Responses;
 
-use Illuminate\Http\Response;
 use Leo108\CAS\Contracts\Responses\AuthenticationSuccessResponse;
 
-class JsonAuthenticationSuccessResponse implements AuthenticationSuccessResponse
+class JsonAuthenticationSuccessResponse extends BaseJsonResponse implements AuthenticationSuccessResponse
 {
-    /**
-     * @var array
-     */
-    protected $data;
-
     /**
      * JsonAuthenticationSuccessResponse constructor.
      */
@@ -52,13 +46,5 @@ class JsonAuthenticationSuccessResponse implements AuthenticationSuccessResponse
         $this->data['serviceResponse']['authenticationSuccess']['proxyGrantingTicket'] = $ticket;
 
         return $this;
-    }
-
-    /**
-     * @return Response
-     */
-    public function toResponse()
-    {
-        return new Response($this->data);
     }
 }

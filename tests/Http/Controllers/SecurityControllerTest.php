@@ -300,13 +300,38 @@ class SecurityControllerTest extends TestCase
         $this->assertEquals($resp->getTargetUrl(), 'http://leo108.com?ticket=ST-abc');
     }
 
+    public function testLogoutWhenNotLoggedInWithoutService()
+    {
+        $loginInteraction = Mockery::mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(false)
+            ->once()
+            ->shouldReceive('showLoggedOut')
+            ->andReturnUsing(
+                function ($request) {
+                    return 'showLoggedOut called';
+                }
+            )
+            ->once()
+            ->getMock();
+        app()->instance(UserLogin::class, $loginInteraction);
+        $request = Mockery::mock(Request::class)
+            ->shouldReceive('get')
+            ->withArgs(['service'])
+            ->andReturn(null)
+            ->once()
+            ->getMock();
+        $this->doesntExpectEvents(CasUserLogoutEvent::class);
+        $this->assertEquals('showLoggedOut called', app()->make(SecurityController::class)->logout($request));
+    }
+
     public function testLogoutWithoutService()
     {
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('logout')
             ->once()
             ->shouldReceive('getCurrentUser')
-            ->andReturn(new User())//just not false is OK
+            ->andReturn(new User())
             ->once()
             ->shouldReceive('showLoggedOut')
             ->andReturnUsing(

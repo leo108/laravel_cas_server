@@ -8,26 +8,17 @@
 
 namespace Leo108\CAS\Responses;
 
-use Illuminate\Http\Response;
 use Leo108\CAS\Contracts\Responses\AuthenticationSuccessResponse;
-use Leo108\CAS\Traits\XmlResponse;
 use SimpleXMLElement;
 
-class XmlAuthenticationSuccessResponse implements AuthenticationSuccessResponse
+class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements AuthenticationSuccessResponse
 {
-    use XmlResponse;
-
-    /**
-     * @var SimpleXMLElement
-     */
-    protected $node;
-
     /**
      * XmlAuthenticationSuccessResponse constructor.
      */
     public function __construct()
     {
-        $this->node = $this->getRootNode();
+        parent::__construct();
         $this->node->addChild('cas:authenticationSuccess');
     }
 
@@ -74,16 +65,6 @@ class XmlAuthenticationSuccessResponse implements AuthenticationSuccessResponse
         $authNode->addChild('cas:proxyGrantingTicket', $ticket);
 
         return $this;
-    }
-
-    /**
-     * @return Response
-     */
-    public function toResponse()
-    {
-        $content = $this->removeXmlFirstLine($this->node->asXML());
-
-        return new Response($content, 200, array('Content-Type' => 'application/xml'));
     }
 
     /**

@@ -144,7 +144,7 @@ class TicketRepositoryTest extends TestCase
             ->getMock();
 
         $length = 32;
-        $ticket = self::getMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, $length);
+        $ticket = self::getNonPublicMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, $length);
         $this->assertNotFalse($ticket);
         $this->assertEquals($length, strlen($ticket));
 
@@ -154,10 +154,10 @@ class TicketRepositoryTest extends TestCase
             ->shouldReceive('getByTicket')
             ->andReturn(true)
             ->getMock();
-        $this->assertFalse(self::getMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, 32));
+        $this->assertFalse(self::getNonPublicMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, 32));
     }
 
-    protected static function getMethod($obj, $name)
+    protected static function getNonPublicMethod($obj, $name)
     {
         $class  = new ReflectionClass($obj);
         $method = $class->getMethod($name);

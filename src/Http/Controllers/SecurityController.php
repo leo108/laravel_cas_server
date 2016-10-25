@@ -114,8 +114,10 @@ class SecurityController extends Controller
     public function logout(Request $request)
     {
         $user = $this->loginInteraction->getCurrentUser($request);
-        $this->loginInteraction->logout($request);
-        event(new CasUserLogoutEvent($request, $user));
+        if ($user) {
+            $this->loginInteraction->logout($request);
+            event(new CasUserLogoutEvent($request, $user));
+        }
         $service = $request->get('service');
         if ($service && $this->serviceRepository->isUrlValid($service)) {
             return redirect($service);

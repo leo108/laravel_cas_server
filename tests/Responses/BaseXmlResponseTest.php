@@ -1,39 +1,38 @@
 <?php
-
 /**
  * Created by PhpStorm.
  * User: leo108
- * Date: 2016/10/23
- * Time: 21:34
+ * Date: 2016/10/25
+ * Time: 15:12
  */
 
-namespace Leo108\CAS\Traits;
+namespace Leo108\CAS\Responses;
 
 use Mockery;
 use SerializableModel;
 use SimpleXMLElement;
+use Symfony\Component\HttpFoundation\Response;
 use TestCase;
-use TestXmlResponseTrait;
 
 function method_exists($obj, $method)
 {
-    return XmlResponseTest::$functions->method_exists($obj, $method);
+    return BaseXmlResponseTest::$functions->method_exists($obj, $method);
 }
 
-class XmlResponseTest extends TestCase
+class BaseXmlResponseTest extends TestCase
 {
     protected $testObj;
     public static $functions;
 
     public function setUp()
     {
-        $this->testObj   = new TestXmlResponseTrait();
+        $this->testObj   = new BaseXmlResponse();
         self::$functions = Mockery::mock();
     }
 
     public function testStringify()
     {
-        $method = self::getMethod($this->testObj, 'stringify');
+        $method = self::getNonPublicMethod($this->testObj, 'stringify');
 
         $objWithToString = Mockery::mock()->shouldReceive('__toString')->andReturn('string from __toString');
         self::$functions
@@ -59,7 +58,7 @@ class XmlResponseTest extends TestCase
     public function testRemoveXmlFirstLine()
     {
         $xml    = new SimpleXMLElement('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
-        $method = self::getMethod($this->testObj, 'removeXmlFirstLine');
+        $method = self::getNonPublicMethod($this->testObj, 'removeXmlFirstLine');
         $this->assertNotContains('<?xml version="1.0"?>', $method->invoke($this->testObj, $xml->asXML()));
 
         $normalStr = 'some string';
@@ -72,7 +71,7 @@ class XmlResponseTest extends TestCase
         $xml->addChild('cas:tag', '123');
         $this->assertContains('cas:tag', $xml->asXML());
         $this->assertContains('123', $xml->asXML());
-        $method = self::getMethod($this->testObj, 'removeByXPath');
+        $method = self::getNonPublicMethod($this->testObj, 'removeByXPath');
         $method->invoke($this->testObj, $xml, 'cas:tag');
         $this->assertNotContains('cas:tag', $xml->asXML());
         $this->assertNotContains('123', $xml->asXML());
@@ -80,10 +79,26 @@ class XmlResponseTest extends TestCase
 
     public function testGetRootNode()
     {
-        $method = self::getMethod($this->testObj, 'getRootNode');
+        $method = self::getNonPublicMethod($this->testObj, 'getRootNode');
         $this->assertContains(
             '<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>',
             $method->invoke($this->testObj)->asXML()
         );
+    }
+
+    public function testToResponse()
+    {
+        $resp = Mockery::mock(BaseXmlResponse::class, [])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods()
+            ->shouldReceive('removeXmlFirstLine')
+            ->andReturn('some string')
+            ->getMock();
+
+        $ret = $resp->toResponse();
+        $this->assertInstanceOf(Response::class, $ret);
+        $this->assertEquals(200, $ret->getStatusCode());
+        $this->assertEquals('some string', $ret->getContent());
+        $this->assertEquals('application/xml', $ret->headers->get('Content-Type'));
     }
 }

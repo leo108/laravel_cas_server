@@ -77,12 +77,21 @@ class TestCase extends Illuminate\Foundation\Testing\TestCase
         (new $migrationClass())->up();
     }
 
-    protected static function getMethod($obj, $name)
+    protected static function getNonPublicMethod($obj, $name)
     {
         $class  = new ReflectionClass($obj);
         $method = $class->getMethod($name);
         $method->setAccessible(true);
 
         return $method;
+    }
+
+    protected static function getNonPublicProperty($obj, $name)
+    {
+        $class    = new ReflectionClass($obj);
+        $property = $class->getProperty($name);
+        $property->setAccessible(true);
+
+        return $property;
     }
 }

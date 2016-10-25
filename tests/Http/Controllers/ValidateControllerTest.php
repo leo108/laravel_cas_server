@@ -192,7 +192,7 @@ class ValidateControllerTest extends TestCase
                 }
             )
             ->getMock();
-        $method           = self::getMethod($controller, 'casValidate');
+        $method           = self::getNonPublicMethod($controller, 'casValidate');
         $this->assertEquals('failureResponse called', $method->invokeArgs($controller, [$request, false]));
 
         //lock ticket failed
@@ -214,7 +214,7 @@ class ValidateControllerTest extends TestCase
                 }
             )
             ->getMock();
-        $method           = self::getMethod($controller, 'casValidate');
+        $method           = self::getNonPublicMethod($controller, 'casValidate');
         $this->assertEquals('failureResponse called', $method->invokeArgs($controller, [$request, false]));
 
         //ticket not exists
@@ -240,7 +240,7 @@ class ValidateControllerTest extends TestCase
                 }
             )
             ->getMock();
-        $method           = self::getMethod($controller, 'casValidate');
+        $method           = self::getNonPublicMethod($controller, 'casValidate');
         $this->assertEquals('failureResponse called', $method->invokeArgs($controller, [$request, false]));
 
         //ticket exists but service url mismatch
@@ -272,7 +272,7 @@ class ValidateControllerTest extends TestCase
                 }
             )
             ->getMock();
-        $method           = self::getMethod($controller, 'casValidate');
+        $method           = self::getNonPublicMethod($controller, 'casValidate');
         $this->assertEquals('failureResponse called', $method->invokeArgs($controller, [$request, false]));
 
         //normal
@@ -314,7 +314,7 @@ class ValidateControllerTest extends TestCase
             )
             ->getMock();
 
-        $method = self::getMethod($controller, 'casValidate');
+        $method = self::getNonPublicMethod($controller, 'casValidate');
         $this->assertEquals('successResponse called', $method->invokeArgs($controller, [$request, false]));
     }
 
@@ -326,7 +326,7 @@ class ValidateControllerTest extends TestCase
             ->getMock();
         $controller = Mockery::mock(ValidateController::class, [$locker, Mockery::mock(TicketRepository::class)])
             ->makePartial();
-        $method     = self::getMethod($controller, 'lockTicket');
+        $method     = self::getNonPublicMethod($controller, 'lockTicket');
         $this->assertEquals('acquireLock called', $method->invokeArgs($controller, ['str', 30]));
     }
 
@@ -339,7 +339,7 @@ class ValidateControllerTest extends TestCase
         app()->instance(TicketLocker::class, $locker);
         $controller = Mockery::mock(ValidateController::class, [$locker, Mockery::mock(TicketRepository::class)])
             ->makePartial();
-        $method     = self::getMethod($controller, 'unlockTicket');
+        $method     = self::getNonPublicMethod($controller, 'unlockTicket');
         $this->assertEquals('releaseLock called', $method->invokeArgs($controller, ['str', 30]));
     }
 
@@ -347,7 +347,7 @@ class ValidateControllerTest extends TestCase
     {
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial();
-        $method     = self::getMethod($controller, 'successResponse');
+        $method     = self::getNonPublicMethod($controller, 'successResponse');
 
         $name       = 'test_name';
         $attributes = [
@@ -395,7 +395,7 @@ class ValidateControllerTest extends TestCase
     {
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial();
-        $method     = self::getMethod($controller, 'failureResponse');
+        $method     = self::getNonPublicMethod($controller, 'failureResponse');
         $code       = 'code';
         $desc       = 'desc';
         $jsonResp   = Mockery::mock(JsonAuthenticationFailureResponse::class)

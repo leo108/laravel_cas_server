@@ -8,16 +8,10 @@
 
 namespace Leo108\CAS\Responses;
 
-use Illuminate\Http\Response;
 use Leo108\CAS\Contracts\Responses\AuthenticationFailureResponse;
 
-class JsonAuthenticationFailureResponse implements AuthenticationFailureResponse
+class JsonAuthenticationFailureResponse extends BaseJsonResponse implements AuthenticationFailureResponse
 {
-    /**
-     * @var array
-     */
-    protected $data;
-
     /**
      * JsonAuthenticationFailureResponse constructor.
      */
@@ -37,13 +31,5 @@ class JsonAuthenticationFailureResponse implements AuthenticationFailureResponse
         $this->data['serviceResponse']['authenticationFailure']['description'] = $description;
 
         return $this;
-    }
-
-    /**
-     * @return Response
-     */
-    public function toResponse()
-    {
-        return new Response($this->data);
     }
 }

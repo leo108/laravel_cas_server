@@ -2,17 +2,31 @@
 /**
  * Created by PhpStorm.
  * User: leo108
- * Date: 2016/10/23
- * Time: 16:26
+ * Date: 2016/10/25
+ * Time: 15:10
  */
 
-namespace Leo108\CAS\Traits;
+namespace Leo108\CAS\Responses;
 
 use Illuminate\Support\Str;
 use SimpleXMLElement;
+use Symfony\Component\HttpFoundation\Response;
 
-trait XmlResponse
+class BaseXmlResponse
 {
+    /**
+     * @var SimpleXMLElement
+     */
+    protected $node;
+
+    /**
+     * BaseXmlResponse constructor.
+     */
+    public function __construct()
+    {
+        $this->node = $this->getRootNode();
+    }
+
     /**
      * @return SimpleXMLElement
      */
@@ -55,7 +69,6 @@ trait XmlResponse
      */
     protected function stringify($value)
     {
-        $str = null;
         if (is_string($value)) {
             $str = $value;
         } else if (is_object($value) && method_exists($value, '__toString')) {
@@ -69,5 +82,15 @@ trait XmlResponse
         }
 
         return $str;
+    }
+
+    /**
+     * @return Response
+     */
+    public function toResponse()
+    {
+        $content = $this->removeXmlFirstLine($this->node->asXML());
+
+        return new Response($content, 200, ['Content-Type' => 'application/xml']);
     }
 }
