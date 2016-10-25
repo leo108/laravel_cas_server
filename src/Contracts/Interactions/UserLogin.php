@@ -15,11 +15,10 @@ use Symfony\Component\HttpFoundation\Response;
 interface UserLogin
 {
     /**
-     * @param Request  $request
-     * @param callable $authenticated
-     * @return Response
+     * @param Request $request
+     * @return UserModel
      */
-    public function login(Request $request, callable $authenticated);
+    public function login(Request $request);
 
     /**
      * @param Request $request
@@ -49,9 +48,14 @@ interface UserLogin
     public function redirectToHome(array $errors = []);
 
     /**
-     * @param Request  $request
-     * @param callable $beforeLogout
+     * @param Request $request
      * @return Response
      */
-    public function logout(Request $request, callable $beforeLogout);
+    public function logout(Request $request);
+
+    /**
+     * @param Request $request
+     * @return Response
+     */
+    public function showLoggedOut(Request $request);
 }

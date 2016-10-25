@@ -9,6 +9,7 @@
 namespace Leo108\CAS\Http\Controllers;
 
 use Leo108\CAS\Contracts\Interactions\UserLogin;
+use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Events\CasUserLoginEvent;
 use Leo108\CAS\Events\CasUserLogoutEvent;
 use Leo108\CAS\Exceptions\CAS\CasException;
@@ -77,7 +78,8 @@ class SecurityController extends Controller
                 return $this->loginInteraction->showLoginWarnPage($request, $url, $service);
             }
 
-            return $this->authenticated($request);
+            return $this->authenticated($request, $user);
+
         }
 
         return $this->loginInteraction->showLoginPage($request, $errors);
@@ -85,19 +87,13 @@ class SecurityController extends Controller
 
     public function login(Request $request)
     {
-        return $this->loginInteraction->login($request, array($this, 'authenticated'));
+        $user = $this->loginInteraction->login($request);
+
+        return $this->authenticated($request, $user);
     }
 
-    public function authenticated(Request $request)
+    public function authenticated(Request $request, UserModel $user)
     {
-        $user = $this->loginInteraction->getCurrentUser($request);
-        if ($user === null) {
-            //unreachable code
-            throw new CasException(
-                CasException::INTERNAL_ERROR,
-                'should call authenticated only after getCurrentUser return not null'
-            );
-        }
         event(new CasUserLoginEvent($request, $user));
         $serviceUrl = $request->get('service', '');
         if (!empty($serviceUrl)) {
@@ -117,11 +113,14 @@ class SecurityController extends Controller
 
     public function logout(Request $request)
     {
-        return $this->loginInteraction->logout(
-            $request,
-            function (Request $request) {
-                event(new CasUserLogoutEvent($request, $this->loginInteraction->getCurrentUser($request)));
-            }
-        );
+        $user = $this->loginInteraction->getCurrentUser($request);
+        $this->loginInteraction->logout($request);
+        event(new CasUserLogoutEvent($request, $user));
+        $service = $request->get('service');
+        if ($service && $this->serviceRepository->isUrlValid($service)) {
+            return redirect($service);
+        }
+
+        return $this->loginInteraction->showLoggedOut($request);
     }
 }

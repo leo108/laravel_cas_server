@@ -36,12 +36,12 @@ class SecurityControllerTest extends TestCase
         self::$functions = Mockery::mock();
     }
 
-    public function testShowLogin()
+    public function testShowLoginWithValidServiceUrl()
     {
-        //not logged in with valid service url
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(true)
+            ->once()
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
         $loginInteraction = Mockery::mock(UserLogin::class)
@@ -53,21 +53,28 @@ class SecurityControllerTest extends TestCase
                     return 'show login called';
                 }
             )
+            ->once()
             ->shouldReceive('getCurrentUser')
             ->andReturn(false)
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
         $request = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('what ever')
+            ->once()
             ->getMock();
         $this->assertEquals('show login called', app()->make(SecurityController::class)->showLogin($request));
 
-        //not logged in with invalid service url
+    }
+
+    public function testShowLoginWithInvalidServiceUrl()
+    {
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(false)
+            ->once()
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
         $loginInteraction = Mockery::mock(UserLogin::class)
@@ -80,34 +87,45 @@ class SecurityControllerTest extends TestCase
                     return 'show login called';
                 }
             )
+            ->once()
             ->shouldReceive('getCurrentUser')
             ->andReturn(false)
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
         $request = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('what ever')
+            ->once()
             ->getMock();
         $this->assertEquals('show login called', app()->make(SecurityController::class)->showLogin($request));
+    }
 
+    public function testShowLoginWhenLoggedInWithValidServiceUrlWithoutWarn()
+    {
         //logged in with valid service url without warn parameter
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(true)
+            ->once()
             ->getMock();
         $ticketRepository  = Mockery::mock(TicketRepository::class);
+        $user              = new User();
         $loginInteraction  = Mockery::mock(UserLogin::class)
             ->shouldReceive('getCurrentUser')
-            ->andReturn(true)//just not false is OK
+            ->andReturn($user)
+            ->once()
             ->getMock();
         $request           = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('what ever')
+            ->once()
             ->shouldReceive('get')
             ->withArgs(['warn'])
             ->andReturn(false)
+            ->once()
             ->getMock();
         $controller        = Mockery::mock(
             SecurityController::class,
@@ -115,14 +133,20 @@ class SecurityControllerTest extends TestCase
         )
             ->makePartial()
             ->shouldReceive('authenticated')
+            ->withArgs([$request, $user])
             ->andReturn('authenticated called')
+            ->once()
             ->getMock();
         $this->assertEquals('authenticated called', $controller->showLogin($request));
+    }
 
+    public function testShowLoginWhenLoggedInWithValidServiceUrlWithWarn()
+    {
         //logged in with valid service url with warn parameter
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(true)
+            ->once()
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
         $ticketRepository = Mockery::mock(TicketRepository::class);
@@ -130,30 +154,39 @@ class SecurityControllerTest extends TestCase
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('getCurrentUser')
             ->andReturn(true)//just not false is OK
+            ->once()
             ->shouldReceive('showLoginWarnPage')
             ->andReturn('showLoginWarnPage called')
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
         $request        = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('what ever')
+            ->once()
             ->shouldReceive('get')
             ->withArgs(['warn'])
             ->andReturn('true')
+            ->once()
             ->getMock();
         $request->query = Mockery::mock()
             ->shouldReceive('all')
             ->andReturn([])
+            ->once()
             ->getMock();
-        self::$functions->shouldReceive('cas_route')->andReturn('some string');
+        self::$functions->shouldReceive('cas_route')->andReturn('some string')->once();
         $controller = app()->make(SecurityController::class);
         $this->assertEquals('showLoginWarnPage called', $controller->showLogin($request));
+    }
 
+    public function testShowLoginWhenLoggedInWithInvalidServiceUrl()
+    {
         //logged in with invalid service url
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(false)
+            ->once()
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
         $ticketRepository = Mockery::mock(TicketRepository::class);
@@ -161,6 +194,7 @@ class SecurityControllerTest extends TestCase
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('getCurrentUser')
             ->andReturn(true)//just not false is OK
+            ->once()
             ->shouldReceive('redirectToHome')
             ->andReturnUsing(
                 function ($errors) {
@@ -170,20 +204,23 @@ class SecurityControllerTest extends TestCase
                     return 'redirectToHome called';
                 }
             )
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
-        $request        = Mockery::mock(Request::class)
+        $request    = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('what ever')
+            ->once()
             ->getMock();
         $controller = app()->make(SecurityController::class);
         $this->assertEquals('redirectToHome called', $controller->showLogin($request));
     }
 
-    public function testAuthenticated()
+    public function testAuthenticatedWithoutService()
     {
         //without service url
+        $user             = new User();
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('redirectToHome')
             ->andReturnUsing(
@@ -191,19 +228,26 @@ class SecurityControllerTest extends TestCase
                     return 'redirectToHome called';
                 }
             )
-            ->shouldReceive('getCurrentUser')
-            ->andReturn(new User())
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
         $request = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('')
+            ->once()
             ->getMock();
         $this->expectsEvents(CasUserLoginEvent::class);
-        $this->assertEquals('redirectToHome called', app()->make(SecurityController::class)->authenticated($request));
+        $this->assertEquals(
+            'redirectToHome called',
+            app()->make(SecurityController::class)->authenticated($request, $user)
+        );
+    }
 
+    public function testAuthenticatedWithService()
+    {
         //with service url but apply ticket failed
+        $user             = new User();
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('redirectToHome')
             ->andReturnUsing(
@@ -214,79 +258,124 @@ class SecurityControllerTest extends TestCase
                     return 'redirectToHome called';
                 }
             )
-            ->shouldReceive('getCurrentUser')
-            ->andReturn(new User())
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
         $ticketRepository = Mockery::mock(TicketRepository::class)
             ->shouldReceive('applyTicket')
             ->andThrow(new CasException(CasException::INTERNAL_ERROR))
+            ->once()
             ->getMock();
         app()->instance(TicketRepository::class, $ticketRepository);
         $request = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('http://leo108.com')
+            ->once()
             ->getMock();
         $this->expectsEvents(CasUserLoginEvent::class);
-        $this->assertEquals('redirectToHome called', app()->make(SecurityController::class)->authenticated($request));
+        $this->assertEquals(
+            'redirectToHome called',
+            app()->make(SecurityController::class)->authenticated($request, $user)
+        );
 
         //with service url
-        $loginInteraction = Mockery::mock(UserLogin::class)
-            ->shouldReceive('getCurrentUser')
-            ->andReturn(new User())
-            ->getMock();
-        app()->instance(UserLogin::class, $loginInteraction);
         $ticket           = Mockery::mock();
         $ticket->ticket   = 'ST-abc';
         $ticketRepository = Mockery::mock(TicketRepository::class)
             ->shouldReceive('applyTicket')
             ->andReturn($ticket)
+            ->once()
             ->getMock();
         app()->instance(TicketRepository::class, $ticketRepository);
         $request = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service', ''])
             ->andReturn('http://leo108.com')
+            ->once()
             ->getMock();
         $this->expectsEvents(CasUserLoginEvent::class);
-        $resp = app()->make(SecurityController::class)->authenticated($request);
+        $resp = app()->make(SecurityController::class)->authenticated($request, $user);
         $this->assertInstanceOf(RedirectResponse::class, $resp);
         $this->assertEquals($resp->getTargetUrl(), 'http://leo108.com?ticket=ST-abc');
     }
 
-    public function testLogout()
+    public function testLogoutWithoutService()
     {
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('logout')
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())//just not false is OK
+            ->once()
+            ->shouldReceive('showLoggedOut')
             ->andReturnUsing(
-                function ($request, $callback) {
-                    $this->expectsEvents(CasUserLogoutEvent::class);
-                    call_user_func_array($callback, [$request]);
-
-                    return 'logout called';
+                function ($request) {
+                    return 'showLoggedOut called';
                 }
             )
-            ->shouldReceive('getCurrentUser')
-            ->andReturn(new User())
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
-        $request = Mockery::mock(Request::class);
-        $this->assertEquals('logout called', app()->make(SecurityController::class)->logout($request));
+        $request = Mockery::mock(Request::class)
+            ->shouldReceive('get')
+            ->withArgs(['service'])
+            ->andReturn(null)
+            ->once()
+            ->getMock();
+        $this->expectsEvents(CasUserLogoutEvent::class);
+        $this->assertEquals('showLoggedOut called', app()->make(SecurityController::class)->logout($request));
+    }
+
+    public function testLogoutWithValidService()
+    {
+        $serviceRepository = Mockery::mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once()
+            ->getMock();
+        app()->instance(ServiceRepository::class, $serviceRepository);
+        $loginInteraction = Mockery::mock(UserLogin::class)
+            ->shouldReceive('logout')
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once()
+            ->getMock();
+        app()->instance(UserLogin::class, $loginInteraction);
+        $request = Mockery::mock(Request::class)
+            ->shouldReceive('get')
+            ->withArgs(['service'])
+            ->andReturn('http://leo108.com')
+            ->once()
+            ->getMock();
+        $this->expectsEvents(CasUserLogoutEvent::class);
+        $resp = app()->make(SecurityController::class)->logout($request);
+        $this->assertInstanceOf(RedirectResponse::class, $resp);
     }
 
     public function testLogin()
     {
+        $user             = new User();
         $loginInteraction = Mockery::mock(UserLogin::class)
             ->shouldReceive('login')
-            ->andReturnUsing(
-                function () {
-                    return 'login called';
-                }
-            )
+            ->andReturn($user)
+            ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
-        $request = Mockery::mock(Request::class);
-        $this->assertEquals('login called', app()->make(SecurityController::class)->login($request));
+        $request           = Mockery::mock(Request::class);
+        $serviceRepository = Mockery::mock(ServiceRepository::class);
+        $ticketRepository  = Mockery::mock(TicketRepository::class);
+        $controller        = Mockery::mock(
+            SecurityController::class,
+            [$serviceRepository, $ticketRepository, $loginInteraction]
+        )
+            ->makePartial()
+            ->shouldReceive('authenticated')
+            ->withArgs([$request, $user])
+            ->andReturn('authenticated called')
+            ->once()
+            ->getMock();
+        $this->assertEquals('authenticated called', $controller->login($request));
     }
 }
