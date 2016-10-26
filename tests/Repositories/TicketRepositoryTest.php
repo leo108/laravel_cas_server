@@ -11,6 +11,7 @@ use Exception;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Service;
 use Leo108\CAS\Models\Ticket;
+use Leo108\CAS\Services\TicketGenerator;
 use Mockery;
 use ReflectionClass;
 use TestCase;
@@ -51,7 +52,8 @@ class TicketRepositoryTest extends TestCase
             ->shouldReceive('getServiceByUrl')
             ->andReturn($service)
             ->getMock();
-        $ticketRepository  = Mockery::mock(TicketRepository::class, [new Ticket(), $serviceRepository])
+        app()->instance(ServiceRepository::class, $serviceRepository);
+        $ticketRepository = $this->initTicketRepository()
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('getAvailableTicket')
@@ -78,7 +80,8 @@ class TicketRepositoryTest extends TestCase
             ->shouldReceive('getServiceByUrl')
             ->andReturn($service)
             ->getMock();
-        $ticket            = Mockery::mock(Ticket::class)
+        app()->instance(ServiceRepository::class, $serviceRepository);
+        $ticket = Mockery::mock(Ticket::class)
             ->shouldReceive('newInstance')
             ->andReturnUsing(
                 function ($param) {
@@ -93,7 +96,8 @@ class TicketRepositoryTest extends TestCase
                 }
             )
             ->getMock();
-        $ticketRepository  = Mockery::mock(TicketRepository::class, [$ticket, $serviceRepository])
+        app()->instance(Ticket::class, $ticket);
+        $ticketRepository = $this->initTicketRepository()
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('getAvailableTicket')
@@ -110,7 +114,7 @@ class TicketRepositoryTest extends TestCase
         $ticket = Mockery::mock(Ticket::class);
         $ticket->shouldReceive('where->first')->andReturn(null);
         app()->instance(Ticket::class, $ticket);
-        $this->assertFalse(app()->make(TicketRepository::class)->getByTicket('what ever'));
+        $this->assertNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
 
         $mockTicket = Mockery::mock(Ticket::class)
             ->shouldReceive('isExpired')
@@ -120,9 +124,9 @@ class TicketRepositoryTest extends TestCase
         $ticket = Mockery::mock(Ticket::class);
         $ticket->shouldReceive('where->first')->andReturn($mockTicket);
         app()->instance(Ticket::class, $ticket);
-        $this->assertNotFalse(app()->make(TicketRepository::class)->getByTicket('what ever', false));
-        $this->assertNotFalse(app()->make(TicketRepository::class)->getByTicket('what ever'));
-        $this->assertFalse(app()->make(TicketRepository::class)->getByTicket('what ever'));
+        $this->assertNotNull(app()->make(TicketRepository::class)->getByTicket('what ever', false));
+        $this->assertNotNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
+        $this->assertNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
     }
 
     public function testInvalidTicket()
@@ -136,33 +140,50 @@ class TicketRepositoryTest extends TestCase
 
     public function testGetAvailableTicket()
     {
-        //normal
-        $ticketRepository = Mockery::mock(TicketRepository::class)
+        $length          = 32;
+        $prefix          = 'ST-';
+        $ticket          = 'ticket string';
+        $ticketGenerator = Mockery::mock(TicketGenerator::class)
+            ->shouldReceive('generate')
+            ->andReturnUsing(
+                function ($totalLength, $paramPrefix, callable $checkFunc, $maxRetry) use ($length, $prefix, $ticket) {
+                    $this->assertEquals($length, $totalLength);
+                    $this->assertEquals($prefix, $paramPrefix);
+                    $this->assertEquals('getByTicket called', call_user_func_array($checkFunc, [$ticket]));
+                    $this->assertEquals(10, $maxRetry);
+
+                    return 'generate called';
+                }
+            )
+            ->once()
+            ->getMock();
+        app()->instance(TicketGenerator::class, $ticketGenerator);
+        $ticketRepository = $this->initTicketRepository()
             ->makePartial()
             ->shouldReceive('getByTicket')
-            ->andReturn(false)
+            ->with($ticket, false)
+            ->andReturn('getByTicket called')
+            ->once()
             ->getMock();
 
-        $length = 32;
-        $ticket = self::getNonPublicMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, $length);
-        $this->assertNotFalse($ticket);
-        $this->assertEquals($length, strlen($ticket));
-
-        //always get occupied ticket
-        $ticketRepository = Mockery::mock(TicketRepository::class)
-            ->makePartial()
-            ->shouldReceive('getByTicket')
-            ->andReturn(true)
-            ->getMock();
-        $this->assertFalse(self::getNonPublicMethod($ticketRepository, 'getAvailableTicket')->invoke($ticketRepository, 32));
+        $this->assertEquals(
+            'generate called',
+            self::getNonPublicMethod($ticketRepository, 'getAvailableTicket')->invoke(
+                $ticketRepository,
+                $length,
+                $prefix
+            )
+        );
     }
 
-    protected static function getNonPublicMethod($obj, $name)
+    /**
+     * @return Mockery\MockInterface
+     */
+    protected function initTicketRepository()
     {
-        $class  = new ReflectionClass($obj);
-        $method = $class->getMethod($name);
-        $method->setAccessible(true);
-
-        return $method;
+        return Mockery::mock(
+            TicketRepository::class,
+            [app(Ticket::class), app(ServiceRepository::class), app(TicketGenerator::class)]
+        );
     }
 }

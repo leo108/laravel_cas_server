@@ -14,6 +14,7 @@ class CasException extends \Exception
     const INVALID_TICKET = 'INVALID_TICKET';
     const INVALID_SERVICE = 'INVALID_SERVICE';
     const INTERNAL_ERROR = 'INTERNAL_ERROR';
+    const UNAUTHORIZED_SERVICE_PROXY = 'UNAUTHORIZED_SERVICE_PROXY';
 
     protected $casErrorCode;
 

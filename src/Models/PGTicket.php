@@ -1,9 +1,9 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: chenyihong
- * Date: 16/8/1
- * Time: 14:53
+ * User: leo108
+ * Date: 2016/10/25
+ * Time: 16:23
  */
 
 namespace Leo108\CAS\Models;
@@ -13,12 +13,12 @@ use Illuminate\Database\Eloquent\Model;
 use Leo108\CAS\Contracts\Models\UserModel;
 
 /**
- * Class Ticket
+ * Class PGTicket
  * @package Leo108\CAS\Models
  *
  * @property integer   $id
  * @property string    $ticket
- * @property string    $service_url
+ * @property string    $pgt_url
  * @property integer   $service_id
  * @property integer   $user_id
  * @property array     $proxies
@@ -26,26 +26,24 @@ use Leo108\CAS\Contracts\Models\UserModel;
  * @property integer   $expire_at
  * @property UserModel $user
  */
-class Ticket extends Model
+class PGTicket extends Model
 {
-    protected $table = 'cas_tickets';
+    protected $table = 'cas_proxy_granting_tickets';
     public $timestamps = false;
-    protected $fillable = ['ticket', 'service_url', 'proxies', 'expire_at', 'created_at'];
+    protected $fillable = ['ticket', 'pgt_url', 'proxies', 'expire_at', 'created_at'];
 
     public function getProxiesAttribute()
     {
-        if (!$this->isProxy()) {
-            return null;
+        $ret = json_decode($this->attributes['proxies'], true);
+        if (!$ret) {
+            return [];
         }
 
-        return json_decode($this->attributes['proxies'], true);
+        return $ret;
     }
 
     public function setProxiesAttribute($value)
     {
-        if ($this->id && !$this->isProxy()) {
-            return;
-        }
         $this->attributes['proxies'] = json_encode($value);
     }
 
@@ -62,10 +60,5 @@ class Ticket extends Model
     public function user()
     {
         return $this->belongsTo(config('cas.user_table.model'), 'user_id', config('cas.user_table.id'));
-    }
-
-    public function isProxy()
-    {
-        return !is_null($this->attributes['proxies']);
     }
 }

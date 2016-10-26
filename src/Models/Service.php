@@ -10,6 +10,14 @@ namespace Leo108\CAS\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Class Service
+ * @package Leo108\CAS\Models
+ *
+ * @property string  $name
+ * @property boolean $allow_proxy
+ * @property boolean $enabled
+ */
 class Service extends Model
 {
     protected $table = 'cas_services';
