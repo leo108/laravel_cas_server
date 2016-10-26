@@ -13,7 +13,6 @@ use Leo108\CAS\Models\Service;
 use Leo108\CAS\Models\Ticket;
 use Leo108\CAS\Services\TicketGenerator;
 use Mockery;
-use ReflectionClass;
 use TestCase;
 use User;
 

@@ -104,7 +104,7 @@ class TicketRepository
     /**
      * @param integer $totalLength
      * @param string  $prefix
-     * @return bool|string
+     * @return string|false
      */
     protected function getAvailableTicket($totalLength, $prefix)
     {

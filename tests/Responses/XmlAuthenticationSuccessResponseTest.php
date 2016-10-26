@@ -9,7 +9,6 @@
 namespace Leo108\CAS\Responses;
 
 use Mockery;
-use Symfony\Component\HttpFoundation\Response;
 use TestCase;
 
 class XmlAuthenticationSuccessResponseTest extends TestCase

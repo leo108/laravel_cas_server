@@ -21,8 +21,6 @@ use Leo108\CAS\Responses\XmlAuthenticationFailureResponse;
 use Leo108\CAS\Responses\XmlAuthenticationSuccessResponse;
 use Leo108\CAS\Services\PGTCaller;
 use Leo108\CAS\Services\TicketGenerator;
-use SerializableModel;
-use SimpleXMLElement;
 use TestCase;
 use Mockery;
 use User;
@@ -244,6 +242,46 @@ class ValidateControllerTest extends TestCase
                 function ($code, $desc, $format) {
                     $this->assertEquals(CasException::INVALID_REQUEST, $code);
                     $this->assertEquals('param pgt and targetService can not be empty', $desc);
+                    $this->assertEquals('XML', $format);
+
+                    return 'proxyFailureResponse called';
+                }
+            )
+            ->once()
+            ->getMock();
+        $this->assertEquals('proxyFailureResponse called', $controller->proxyAction($request));
+    }
+
+    public function testProxyActionWithInvalidTicket()
+    {
+        $request       = Mockery::mock(Request::class)
+            ->shouldReceive('get')
+            ->with('pgt', '')
+            ->andReturn('pgt string')
+            ->once()
+            ->shouldReceive('get')
+            ->with('targetService', '')
+            ->andReturn('http://target.com')
+            ->once()
+            ->shouldReceive('get')
+            ->with('format', 'XML')
+            ->andReturn('XML')
+            ->once()
+            ->getMock();
+        $pgtRepository = Mockery::mock(PGTicketRepository::class)
+            ->shouldReceive('getByTicket')
+            ->andReturn(false)
+            ->once()
+            ->getMock();
+        app()->instance(PGTicketRepository::class, $pgtRepository);
+        $controller = $this->initController()
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods()
+            ->shouldReceive('proxyFailureResponse')
+            ->andReturnUsing(
+                function ($code, $desc, $format) {
+                    $this->assertEquals(CasException::INVALID_TICKET, $code);
+                    $this->assertEquals('ticket is not valid', $desc);
                     $this->assertEquals('XML', $format);
 
                     return 'proxyFailureResponse called';
