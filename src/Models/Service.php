@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Model;
 class Service extends Model
 {
     protected $table = 'cas_services';
-    protected $fillable = ['name', 'enabled'];
+    protected $fillable = ['name', 'enabled', 'allow_proxy'];
     protected $casts = [
-        'enabled' => 'boolean',
+        'enabled'     => 'boolean',
+        'allow_proxy' => 'boolean',
     ];
 
     public function hosts()
