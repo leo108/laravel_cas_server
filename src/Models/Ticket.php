@@ -22,8 +22,8 @@ use Leo108\CAS\Contracts\Models\UserModel;
  * @property integer   $service_id
  * @property integer   $user_id
  * @property array     $proxies
- * @property integer   $created_at
- * @property integer   $expire_at
+ * @property Carbon    $created_at
+ * @property Carbon    $expire_at
  * @property UserModel $user
  */
 class Ticket extends Model
@@ -31,19 +31,20 @@ class Ticket extends Model
     protected $table = 'cas_tickets';
     public $timestamps = false;
     protected $fillable = ['ticket', 'service_url', 'proxies', 'expire_at', 'created_at'];
+    protected $casts = [
+        'expire_at'  => 'datetime',
+        'created_at' => 'datetime',
+    ];
 
     public function getProxiesAttribute()
     {
-        if (!$this->isProxy()) {
-            return null;
-        }
-
         return json_decode($this->attributes['proxies'], true);
     }
 
     public function setProxiesAttribute($value)
     {
-        if ($this->id && !$this->isProxy()) {
+        //can not modify an existing record
+        if ($this->id) {
             return;
         }
         $this->attributes['proxies'] = json_encode($value);
@@ -51,7 +52,7 @@ class Ticket extends Model
 
     public function isExpired()
     {
-        return (new Carbon($this->expire_at))->getTimestamp() < time();
+        return $this->expire_at->getTimestamp() < time();
     }
 
     public function service()
@@ -66,6 +67,6 @@ class Ticket extends Model
 
     public function isProxy()
     {
-        return !is_null($this->attributes['proxies']);
+        return !empty($this->proxies);
     }
 }

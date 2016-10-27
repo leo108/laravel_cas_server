@@ -22,8 +22,8 @@ use Leo108\CAS\Contracts\Models\UserModel;
  * @property integer   $service_id
  * @property integer   $user_id
  * @property array     $proxies
- * @property integer   $created_at
- * @property integer   $expire_at
+ * @property Carbon    $created_at
+ * @property Carbon    $expire_at
  * @property UserModel $user
  */
 class PGTicket extends Model
@@ -31,6 +31,10 @@ class PGTicket extends Model
     protected $table = 'cas_proxy_granting_tickets';
     public $timestamps = false;
     protected $fillable = ['ticket', 'pgt_url', 'proxies', 'expire_at', 'created_at'];
+    protected $casts = [
+        'expire_at'  => 'datetime',
+        'created_at' => 'datetime',
+    ];
 
     public function getProxiesAttribute()
     {
@@ -49,7 +53,7 @@ class PGTicket extends Model
 
     public function isExpired()
     {
-        return (new Carbon($this->expire_at))->getTimestamp() < time();
+        return $this->expire_at->getTimestamp() < time();
     }
 
     public function service()
