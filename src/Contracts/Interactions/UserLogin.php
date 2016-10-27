@@ -55,7 +55,7 @@ interface UserLogin
 
     /**
      * @param Request $request
-     * @return Response
+     * @return void
      */
     public function logout(Request $request);
 
