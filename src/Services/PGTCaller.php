@@ -26,14 +26,18 @@ class PGTCaller
         $this->client = $client;
     }
 
+    /**
+     * @param string $pgtUrl
+     * @param string $pgt
+     * @param string $pgtiou
+     * @return bool
+     */
     public function call($pgtUrl, $pgt, $pgtiou)
     {
-        $query = http_build_query(
-            [
-                'pgtId'  => $pgt,
-                'pgtIou' => $pgtiou,
-            ]
-        );
+        $query = [
+            'pgtId'  => $pgt,
+            'pgtIou' => $pgtiou,
+        ];
         parse_str(parse_url($pgtUrl, PHP_URL_QUERY), $originQuery);
 
         try {

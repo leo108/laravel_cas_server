@@ -2,85 +2,118 @@
 /**
  * Created by PhpStorm.
  * User: leo108
- * Date: 2016/9/29
- * Time: 09:53
+ * Date: 2016/10/26
+ * Time: 21:39
  */
+
 namespace Leo108\CAS\Repositories;
+
 
 use Exception;
 use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Exceptions\CAS\CasException;
+use Leo108\CAS\Models\PGTicket;
 use Leo108\CAS\Models\Service;
-use Leo108\CAS\Models\Ticket;
 use Leo108\CAS\Services\TicketGenerator;
 use Mockery;
 use TestCase;
 
-class TicketRepositoryTest extends TestCase
+class PGTicketRepositoryTest extends TestCase
 {
-    public function testApplyTicket()
+    public function testApplyTicketWithInvalidSerivce()
     {
-        //test if service url is not valid
-        $user = Mockery::mock(UserModel::class)
-            ->shouldReceive('getAttribute')
-            ->withArgs(['id'])
-            ->andReturn(1)
-            ->shouldReceive('getEloquentModel')
-            ->andReturn(Mockery::self())
-            ->getMock();
-
+        $user              = Mockery::mock(UserModel::class);
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('getServiceByUrl')
             ->andReturn(false)
+            ->once()
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
         try {
-            app()->make(TicketRepository::class)->applyTicket($user, 'what ever');
+            app()->make(PGTicketRepository::class)->applyTicket($user, 'what ever');
         } catch (Exception $e) {
             $this->assertInstanceOf(CasException::class, $e);
-            $this->assertEquals($e->getCasErrorCode(), CasException::INVALID_SERVICE);
+            $this->assertEquals(CasException::UNAUTHORIZED_SERVICE_PROXY, $e->getCasErrorCode());
         }
+    }
 
-        //test if get available ticket failed
+    public function testApplyTicketWithNonProxyService()
+    {
+        $user              = Mockery::mock(UserModel::class);
         $service           = Mockery::mock(Service::class)
             ->shouldReceive('getAttribute')
-            ->withArgs(['id'])
-            ->andReturn(1)
+            ->withArgs(['allow_proxy'])
+            ->andReturn(false)
+            ->once()
             ->getMock();
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('getServiceByUrl')
             ->andReturn($service)
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
-        $ticketRepository = $this->initTicketRepository()
+
+        try {
+            app()->make(PGTicketRepository::class)->applyTicket($user, 'what ever');
+        } catch (Exception $e) {
+            $this->assertInstanceOf(CasException::class, $e);
+            $this->assertEquals(CasException::UNAUTHORIZED_SERVICE_PROXY, $e->getCasErrorCode());
+        }
+    }
+
+    public function testApplyTicketWithValidServiceButApplyTicketFailed()
+    {
+        $user              = Mockery::mock(UserModel::class);
+        $service           = Mockery::mock(Service::class)
+            ->shouldReceive('getAttribute')
+            ->withArgs(['allow_proxy'])
+            ->andReturn(true)
+            ->once()
+            ->getMock();
+        $serviceRepository = Mockery::mock(ServiceRepository::class)
+            ->shouldReceive('getServiceByUrl')
+            ->andReturn($service)
+            ->once()
+            ->getMock();
+        app()->instance(ServiceRepository::class, $serviceRepository);
+        $pgTicketRepository = $this->initPGTicketRepository()
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('getAvailableTicket')
             ->andReturn(false)
+            ->once()
             ->getMock();
 
         try {
-            $ticketRepository->applyTicket($user, 'what ever');
+            $pgTicketRepository->applyTicket($user, 'what ever');
         } catch (Exception $e) {
             $this->assertInstanceOf(CasException::class, $e);
-            $this->assertEquals($e->getCasErrorCode(), CasException::INTERNAL_ERROR);
-            $this->assertEquals($e->getMessage(), 'apply ticket failed');
+            $this->assertEquals(CasException::INTERNAL_ERROR, $e->getCasErrorCode());
+            $this->assertEquals('apply proxy-granting ticket failed', $e->getMessage());
         }
+    }
 
-        //normal
+    public function testApplyTicketWithValidServiceAndApplyTicketOK()
+    {
+        $user              = Mockery::mock(UserModel::class)
+            ->shouldReceive('getEloquentModel')
+            ->andReturn(Mockery::self())
+            ->once()
+            ->getMock();
         $ticketStr         = 'ST-abc';
-        $serviceUrl        = 'what ever';
+        $pgtUrl            = 'what ever';
+        $proxies           = ['http://proxy2.com', 'http://proxy1.com'];
         $service           = Mockery::mock(Service::class)
             ->shouldReceive('getAttribute')
-            ->withArgs(['id'])
-            ->andReturn(1)
+            ->withArgs(['allow_proxy'])
+            ->andReturn(true)
+            ->once()
             ->getMock();
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('getServiceByUrl')
             ->andReturn($service)
             ->getMock();
         app()->instance(ServiceRepository::class, $serviceRepository);
-        $ticket = Mockery::mock(Ticket::class)
+        $ticket = Mockery::mock(PGTicket::class)
             ->shouldReceive('newInstance')
             ->andReturnUsing(
                 function ($param) {
@@ -88,59 +121,52 @@ class TicketRepositoryTest extends TestCase
                     $obj->shouldReceive('user->associate');
                     $obj->shouldReceive('service->associate');
                     $obj->shouldReceive('save');
-                    $obj->ticket      = $param['ticket'];
-                    $obj->service_url = $param['service_url'];
+                    $obj->ticket  = $param['ticket'];
+                    $obj->pgt_url = $param['pgt_url'];
+                    $obj->proxies = $param['proxies'];
 
                     return $obj;
                 }
             )
             ->getMock();
-        app()->instance(Ticket::class, $ticket);
-        $ticketRepository = $this->initTicketRepository()
+        app()->instance(PGTicket::class, $ticket);
+        $ticketRepository = $this->initPGTicketRepository()
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('getAvailableTicket')
             ->andReturn($ticketStr)
             ->getMock();
 
-        $record = $ticketRepository->applyTicket($user, $serviceUrl);
+        $record = $ticketRepository->applyTicket($user, $pgtUrl, $proxies);
         $this->assertEquals($ticketStr, $record->ticket);
-        $this->assertEquals($serviceUrl, $record->service_url);
+        $this->assertEquals($pgtUrl, $record->pgt_url);
+        $this->assertEquals($proxies, $record->proxies);
     }
 
     public function testGetByTicket()
     {
-        $ticket = Mockery::mock(Ticket::class);
+        $ticket = Mockery::mock(PGTicket::class);
         $ticket->shouldReceive('where->first')->andReturn(null);
-        app()->instance(Ticket::class, $ticket);
-        $this->assertNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
+        app()->instance(PGTicket::class, $ticket);
+        $this->assertNull(app()->make(PGTicketRepository::class)->getByTicket('what ever'));
 
-        $mockTicket = Mockery::mock(Ticket::class)
+        $mockTicket = Mockery::mock(PGTicket::class)
             ->shouldReceive('isExpired')
             ->andReturnValues([false, true])
             ->getMock();
 
-        $ticket = Mockery::mock(Ticket::class);
+        $ticket = Mockery::mock(PGTicket::class);
         $ticket->shouldReceive('where->first')->andReturn($mockTicket);
-        app()->instance(Ticket::class, $ticket);
-        $this->assertNotNull(app()->make(TicketRepository::class)->getByTicket('what ever', false));
-        $this->assertNotNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
-        $this->assertNull(app()->make(TicketRepository::class)->getByTicket('what ever'));
-    }
-
-    public function testInvalidTicket()
-    {
-        $mockTicket = Mockery::mock(Ticket::class)
-            ->shouldReceive('delete')
-            ->andReturn(true)
-            ->getMock();
-        $this->assertTrue(app()->make(TicketRepository::class)->invalidTicket($mockTicket));
+        app()->instance(PGTicket::class, $ticket);
+        $this->assertNotNull(app()->make(PGTicketRepository::class)->getByTicket('what ever', false));
+        $this->assertNotNull(app()->make(PGTicketRepository::class)->getByTicket('what ever'));
+        $this->assertNull(app()->make(PGTicketRepository::class)->getByTicket('what ever'));
     }
 
     public function testGetAvailableTicket()
     {
         $length          = 32;
-        $prefix          = 'ST-';
+        $prefix          = 'PGT-';
         $ticket          = 'ticket string';
         $ticketGenerator = Mockery::mock(TicketGenerator::class)
             ->shouldReceive('generate')
@@ -157,7 +183,7 @@ class TicketRepositoryTest extends TestCase
             ->once()
             ->getMock();
         app()->instance(TicketGenerator::class, $ticketGenerator);
-        $ticketRepository = $this->initTicketRepository()
+        $ticketRepository = $this->initPGTicketRepository()
             ->makePartial()
             ->shouldReceive('getByTicket')
             ->with($ticket, false)
@@ -178,11 +204,11 @@ class TicketRepositoryTest extends TestCase
     /**
      * @return Mockery\MockInterface
      */
-    protected function initTicketRepository()
+    protected function initPGTicketRepository()
     {
         return Mockery::mock(
-            TicketRepository::class,
-            [app(Ticket::class), app(ServiceRepository::class), app(TicketGenerator::class)]
+            PGTicketRepository::class,
+            [app(PGTicket::class), app(ServiceRepository::class), app(TicketGenerator::class)]
         );
     }
 }

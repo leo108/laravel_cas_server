@@ -112,7 +112,7 @@ class TicketRepository
             $totalLength,
             $prefix,
             function ($ticket) {
-                return $this->getByTicket($ticket, false);
+                return is_null($this->getByTicket($ticket, false));
             },
             10
         );

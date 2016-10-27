@@ -12,7 +12,6 @@ use Illuminate\Support\Str;
 
 class TicketGenerator
 {
-
     /**
      * @param integer  $totalLength
      * @param string   $prefix
@@ -26,7 +25,7 @@ class TicketGenerator
         $flag   = false;
         for ($i = 0; $i < $maxRetry; $i++) {
             $ticket = $this->generateOne($totalLength, $prefix);
-            if (!call_user_func_array($checkFunc, [$ticket])) {
+            if (call_user_func_array($checkFunc, [$ticket])) {
                 $flag = true;
                 break;
             }
@@ -39,6 +38,11 @@ class TicketGenerator
         return $ticket;
     }
 
+    /**
+     * @param integer $totalLength
+     * @param string  $prefix
+     * @return string
+     */
     public function generateOne($totalLength, $prefix)
     {
         return $prefix.Str::random($totalLength - strlen($prefix));

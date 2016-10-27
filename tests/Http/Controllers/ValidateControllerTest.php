@@ -10,6 +10,7 @@ namespace Leo108\CAS\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Contracts\TicketLocker;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
@@ -17,13 +18,16 @@ use Leo108\CAS\Repositories\PGTicketRepository;
 use Leo108\CAS\Repositories\TicketRepository;
 use Leo108\CAS\Responses\JsonAuthenticationFailureResponse;
 use Leo108\CAS\Responses\JsonAuthenticationSuccessResponse;
+use Leo108\CAS\Responses\JsonProxyFailureResponse;
+use Leo108\CAS\Responses\JsonProxySuccessResponse;
 use Leo108\CAS\Responses\XmlAuthenticationFailureResponse;
 use Leo108\CAS\Responses\XmlAuthenticationSuccessResponse;
+use Leo108\CAS\Responses\XmlProxyFailureResponse;
+use Leo108\CAS\Responses\XmlProxySuccessResponse;
 use Leo108\CAS\Services\PGTCaller;
 use Leo108\CAS\Services\TicketGenerator;
 use TestCase;
 use Mockery;
-use User;
 
 function method_exists($obj, $method)
 {
@@ -140,81 +144,60 @@ class ValidateControllerTest extends TestCase
 
     public function testV2ServiceValidateAction()
     {
+        $request    = Mockery::mock(Request::class);
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('casValidate')
-            ->andReturnUsing(
-                function ($request, $returnAttr, $allowProxy) {
-                    $this->assertFalse($returnAttr);
-                    $this->assertFalse($allowProxy);
-
-                    return 'casValidate called';
-                }
-            )
+            ->with($request, false, false)
+            ->andReturn('casValidate called')
             ->once()
             ->getMock();
-        $request    = Mockery::mock(Request::class);
         $this->assertEquals('casValidate called', $controller->v2ServiceValidateAction($request));
     }
 
     public function testV2ProxyValidateAction()
     {
+        $request    = Mockery::mock(Request::class);
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('casValidate')
-            ->andReturnUsing(
-                function ($request, $returnAttr, $allowProxy) {
-                    $this->assertFalse($returnAttr);
-                    $this->assertTrue($allowProxy);
-
-                    return 'casValidate called';
-                }
-            )
+            ->with($request, false, true)
+            ->andReturn('casValidate called')
             ->once()
             ->getMock();
-        $request    = Mockery::mock(Request::class);
+
         $this->assertEquals('casValidate called', $controller->v2ProxyValidateAction($request));
     }
 
     public function testV3ServiceValidateAction()
     {
+        $request    = Mockery::mock(Request::class);
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('casValidate')
-            ->andReturnUsing(
-                function ($request, $returnAttr, $allowProxy) {
-                    $this->assertTrue($returnAttr);
-                    $this->assertFalse($allowProxy);
-
-                    return 'casValidate called';
-                }
-            )
+            ->with($request, true, false)
+            ->andReturn('casValidate called')
             ->once()
             ->getMock();
-        $request    = Mockery::mock(Request::class);
+
         $this->assertEquals('casValidate called', $controller->v3ServiceValidateAction($request));
     }
 
     public function testV3ProxyValidateAction()
     {
+        $request    = Mockery::mock(Request::class);
         $controller = Mockery::mock(ValidateController::class)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('casValidate')
-            ->andReturnUsing(
-                function ($request, $returnAttr, $allowProxy) {
-                    $this->assertTrue($returnAttr);
-                    $this->assertTrue($allowProxy);
-
-                    return 'casValidate called';
-                }
-            )
+            ->with($request, true, true)
+            ->andReturn('casValidate called')
             ->once()
             ->getMock();
-        $request    = Mockery::mock(Request::class);
+
         $this->assertEquals('casValidate called', $controller->v3ProxyValidateAction($request));
     }
 
@@ -238,15 +221,8 @@ class ValidateControllerTest extends TestCase
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('proxyFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_REQUEST, $code);
-                    $this->assertEquals('param pgt and targetService can not be empty', $desc);
-                    $this->assertEquals('XML', $format);
-
-                    return 'proxyFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_REQUEST, 'param pgt and targetService can not be empty', 'XML')
+            ->andReturn('proxyFailureResponse called')
             ->once()
             ->getMock();
         $this->assertEquals('proxyFailureResponse called', $controller->proxyAction($request));
@@ -278,18 +254,61 @@ class ValidateControllerTest extends TestCase
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('proxyFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_TICKET, $code);
-                    $this->assertEquals('ticket is not valid', $desc);
-                    $this->assertEquals('XML', $format);
-
-                    return 'proxyFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_TICKET, 'ticket is not valid', 'XML')
+            ->andReturn('proxyFailureResponse called')
             ->once()
             ->getMock();
         $this->assertEquals('proxyFailureResponse called', $controller->proxyAction($request));
+    }
+
+    public function testProxyActionWithValidTicket()
+    {
+        $request           = Mockery::mock(Request::class)
+            ->shouldReceive('get')
+            ->with('pgt', '')
+            ->andReturn('pgt string')
+            ->once()
+            ->shouldReceive('get')
+            ->with('targetService', '')
+            ->andReturn('http://target.com')
+            ->once()
+            ->shouldReceive('get')
+            ->with('format', 'XML')
+            ->andReturn('XML')
+            ->once()
+            ->getMock();
+        $user              = Mockery::mock(UserModel::class);
+        $pgTicket          = Mockery::mock();
+        $pgTicket->proxies = ['http://proxy2.com', 'http://proxy1.com'];
+        $pgTicket->pgt_url = 'http://proxy3.com';
+        $pgTicket->user    = $user;
+
+        $pgtRepository = Mockery::mock(PGTicketRepository::class)
+            ->shouldReceive('getByTicket')
+            ->andReturn($pgTicket)
+            ->once()
+            ->getMock();
+        app()->instance(PGTicketRepository::class, $pgtRepository);
+
+        $ticket         = Mockery::mock();
+        $ticket->ticket = 'proxy ticket string';
+
+        $ticketRepository = Mockery::mock(TicketRepository::class)
+            ->shouldReceive('applyTicket')
+            ->with($user, 'http://target.com', ['http://proxy3.com', 'http://proxy2.com', 'http://proxy1.com'])
+            ->andReturn($ticket)
+            ->once()
+            ->getMock();
+        app()->instance(TicketRepository::class, $ticketRepository);
+        $controller = $this->initController()
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods()
+            ->shouldReceive('proxySuccessResponse')
+            ->with('proxy ticket string', 'XML')
+            ->andReturn('proxySuccessResponse called')
+            ->once()
+            ->getMock();
+        $this->assertEquals('proxySuccessResponse called', $controller->proxyAction($request));
     }
 
     public function testCasValidateWithInvalidRequest()
@@ -313,15 +332,8 @@ class ValidateControllerTest extends TestCase
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('authFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_REQUEST, $code);
-                    $this->assertEquals('param service and ticket can not be empty', $desc);
-                    $this->assertEquals('JSON', $format);
-
-                    return 'authFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_REQUEST, 'param service and ticket can not be empty', 'JSON')
+            ->andReturn('authFailureResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -338,15 +350,8 @@ class ValidateControllerTest extends TestCase
             ->andReturn(false)
             ->once()
             ->shouldReceive('authFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INTERNAL_ERROR, $code);
-                    $this->assertEquals('try to lock ticket failed', $desc);
-                    $this->assertEquals('JSON', $format);
-
-                    return 'authFailureResponse called';
-                }
-            )
+            ->with(CasException::INTERNAL_ERROR, 'try to lock ticket failed', 'JSON')
+            ->andReturn('authFailureResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -371,15 +376,8 @@ class ValidateControllerTest extends TestCase
             ->andReturn(true)
             ->once()
             ->shouldReceive('authFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_TICKET, $code);
-                    $this->assertEquals('ticket is not valid', $desc);
-                    $this->assertEquals('JSON', $format);
-
-                    return 'authFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_TICKET, 'ticket is not valid', 'JSON')
+            ->andReturn('authFailureResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -415,15 +413,8 @@ class ValidateControllerTest extends TestCase
             ->andReturn(true)
             ->once()
             ->shouldReceive('authFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_SERVICE, $code);
-                    $this->assertEquals('service is not valid', $desc);
-                    $this->assertEquals('JSON', $format);
-
-                    return 'authFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_SERVICE, 'service is not valid', 'JSON')
+            ->andReturn('authFailureResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -455,15 +446,8 @@ class ValidateControllerTest extends TestCase
             ->andReturn(true)
             ->once()
             ->shouldReceive('authFailureResponse')
-            ->andReturnUsing(
-                function ($code, $desc, $format) {
-                    $this->assertEquals(CasException::INVALID_TICKET, $code);
-                    $this->assertEquals('ticket is not valid', $desc);
-                    $this->assertEquals('JSON', $format);
-
-                    return 'authFailureResponse called';
-                }
-            )
+            ->with(CasException::INVALID_TICKET, 'ticket is not valid', 'JSON')
+            ->andReturn('authFailureResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -474,7 +458,7 @@ class ValidateControllerTest extends TestCase
     {
         $proxies          = ['http://proxy1.com', 'http://proxy2.com'];
         $request          = $this->getValidRequest('');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
@@ -513,17 +497,8 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxiesParam, $iou) use ($proxies) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEquals($proxies, $proxiesParam);
-                    $this->assertNull($iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], $proxies, null)
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
         $method     = self::getNonPublicMethod($controller, 'casValidate');
@@ -533,7 +508,7 @@ class ValidateControllerTest extends TestCase
     public function testCasValidateWithValidTicketAndServiceAndNoPgt()
     {
         $request          = $this->getValidRequest('');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
@@ -568,17 +543,8 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxies, $iou) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEmpty($proxies);
-                    $this->assertNull($iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], [], null)
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
 
@@ -589,7 +555,7 @@ class ValidateControllerTest extends TestCase
     public function testCasValidateWithValidTicketAndServiceAndPgtButApplyPGTFailed()
     {
         $request          = $this->getValidRequest('http://app1.com/pgtCallback');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
@@ -630,17 +596,8 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxies, $iou) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEmpty($proxies);
-                    $this->assertNull($iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], [], null)
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
 
@@ -651,7 +608,7 @@ class ValidateControllerTest extends TestCase
     public function testCasValidateWithValidTicketAndServiceAndPgtButCallPgtUrlFailed()
     {
         $request          = $this->getValidRequest('http://app1.com/pgtCallback');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
@@ -704,17 +661,8 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxies, $iou) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEmpty($proxies);
-                    $this->assertNull($iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], [], null)
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
 
@@ -722,10 +670,10 @@ class ValidateControllerTest extends TestCase
         $this->assertEquals('authSuccessResponse called', $method->invokeArgs($controller, [$request, false, false]));
     }
 
-    public function testCasValidateWithValidTicketAndServiceAndPgtButCallPgtUrlSuccess()
+    public function testCasValidateWithValidTicketAndServiceAndPgtAndCallPgtUrlSuccess()
     {
         $request          = $this->getValidRequest('http://app1.com/pgtCallback');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
@@ -778,17 +726,8 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxies, $iou) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEmpty($proxies);
-                    $this->assertEquals('pgtiou string', $iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], [], 'pgtiou string')
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
 
@@ -796,18 +735,18 @@ class ValidateControllerTest extends TestCase
         $this->assertEquals('authSuccessResponse called', $method->invokeArgs($controller, [$request, false, false]));
     }
 
-    public function testCasValidateWithValidProxyTicketAndServiceAndPgtButCallPgtUrlSuccess()
+    public function testCasValidateWithValidProxyTicketAndServiceAndPgtAndCallPgtUrlSuccess()
     {
         $request          = $this->getValidRequest('http://app1.com/pgtCallback');
-        $user             = Mockery::mock(User::class)
+        $user             = Mockery::mock(UserModel::class)
             ->shouldReceive('getName')
             ->andReturn('test_user')
             ->once()
             ->getMock();
         $ticket           = Mockery::mock(Ticket::class)
             ->shouldReceive('isProxy')
-            ->andReturn(false)
-            ->times(2)
+            ->andReturn(true)
+            ->once()
             ->shouldReceive('getAttribute')
             ->withArgs(['service_url'])
             ->andReturn('http://leo108.com')
@@ -816,6 +755,10 @@ class ValidateControllerTest extends TestCase
             ->withArgs(['user'])
             ->andReturn($user)
             ->times(2)
+            ->shouldReceive('getAttribute')
+            ->withArgs(['proxies'])
+            ->andReturn(['http://proxy1.com'])
+            ->once()
             ->getMock();
         $ticketRepository = Mockery::mock(TicketRepository::class)
             ->shouldReceive('getByTicket')
@@ -852,22 +795,13 @@ class ValidateControllerTest extends TestCase
             ->shouldReceive('unlockTicket')
             ->once()
             ->shouldReceive('authSuccessResponse')
-            ->andReturnUsing(
-                function ($name, $format, $attributes, $proxies, $iou) {
-                    $this->assertEquals('test_user', $name);
-                    $this->assertEmpty($attributes);
-                    $this->assertEquals('JSON', $format);
-                    $this->assertEmpty($proxies);
-                    $this->assertEquals('pgtiou string', $iou);
-
-                    return 'authSuccessResponse called';
-                }
-            )
+            ->with('test_user', 'JSON', [], ['http://proxy1.com'], 'pgtiou string')
+            ->andReturn('authSuccessResponse called')
             ->once()
             ->getMock();
 
         $method = self::getNonPublicMethod($controller, 'casValidate');
-        $this->assertEquals('authSuccessResponse called', $method->invokeArgs($controller, [$request, false, false]));
+        $this->assertEquals('authSuccessResponse called', $method->invokeArgs($controller, [$request, false, true]));
     }
 
     public function testLockTicket()
@@ -921,10 +855,14 @@ class ValidateControllerTest extends TestCase
             ->with($proxies)
             ->once()
             ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
             ->once()
             ->getMock();
         app()->instance(JsonAuthenticationSuccessResponse::class, $jsonResp);
-        $method->invokeArgs($controller, ['test_name', 'JSON', $attributes, $proxies, []]);
+        $this->assertEquals(
+            'toResponse called',
+            $method->invokeArgs($controller, ['test_name', 'JSON', $attributes, $proxies, []])
+        );
 
         $xmlResp = Mockery::mock(XmlAuthenticationSuccessResponse::class)
             ->shouldReceive('setUser')
@@ -940,10 +878,14 @@ class ValidateControllerTest extends TestCase
             ->with($pgt)
             ->once()
             ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
             ->once()
             ->getMock();
         app()->instance(XmlAuthenticationSuccessResponse::class, $xmlResp);
-        $method->invokeArgs($controller, ['test_name', 'XML', $attributes, $proxies, $pgt]);
+        $this->assertEquals(
+            'toResponse called',
+            $method->invokeArgs($controller, ['test_name', 'XML', $attributes, $proxies, $pgt])
+        );
     }
 
     public function testAuthFailureResponse()
@@ -972,6 +914,66 @@ class ValidateControllerTest extends TestCase
             ->getMock();
         app()->instance(XmlAuthenticationFailureResponse::class, $xmlResp);
         $method->invokeArgs($controller, [$code, $desc, 'XML']);
+    }
+
+    public function testProxySuccessResponse()
+    {
+        $controller = Mockery::mock(ValidateController::class)
+            ->makePartial();
+        $method     = self::getNonPublicMethod($controller, 'proxySuccessResponse');
+
+        $ticket   = 'ticket';
+        $jsonResp = Mockery::mock(JsonProxySuccessResponse::class)
+            ->shouldReceive('setProxyTicket')
+            ->with($ticket)
+            ->once()
+            ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
+            ->once()
+            ->getMock();
+        app()->instance(JsonProxySuccessResponse::class, $jsonResp);
+        $this->assertEquals('toResponse called', $method->invokeArgs($controller, [$ticket, 'JSON']));
+
+        $xmlResp = Mockery::mock(XmlProxySuccessResponse::class)
+            ->shouldReceive('setProxyTicket')
+            ->with($ticket)
+            ->once()
+            ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
+            ->once()
+            ->getMock();
+        app()->instance(XmlProxySuccessResponse::class, $xmlResp);
+        $this->assertEquals('toResponse called', $method->invokeArgs($controller, [$ticket, 'XML']));
+    }
+
+    public function testProxyFailureResponse()
+    {
+        $controller = Mockery::mock(ValidateController::class)
+            ->makePartial();
+        $method     = self::getNonPublicMethod($controller, 'proxyFailureResponse');
+        $code       = 'code';
+        $desc       = 'desc';
+        $jsonResp   = Mockery::mock(JsonProxyFailureResponse::class)
+            ->shouldReceive('setFailure')
+            ->withArgs([$code, $desc])
+            ->once()
+            ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
+            ->once()
+            ->getMock();
+        app()->instance(JsonProxyFailureResponse::class, $jsonResp);
+        $this->assertEquals('toResponse called', $method->invokeArgs($controller, [$code, $desc, 'JSON']));
+
+        $xmlResp = Mockery::mock(XmlProxyFailureResponse::class)
+            ->shouldReceive('setFailure')
+            ->withArgs([$code, $desc])
+            ->once()
+            ->shouldReceive('toResponse')
+            ->andReturn('toResponse called')
+            ->once()
+            ->getMock();
+        app()->instance(XmlProxyFailureResponse::class, $xmlResp);
+        $this->assertEquals('toResponse called', $method->invokeArgs($controller, [$code, $desc, 'XML']));
     }
 
     protected function getValidRequest($pgt = null)
