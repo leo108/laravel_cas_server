@@ -88,6 +88,9 @@ class SecurityController extends Controller
     public function login(Request $request)
     {
         $user = $this->loginInteraction->login($request);
+        if (is_null($user)) {
+            return $this->loginInteraction->showAuthenticateFailed($request);
+        }
 
         return $this->authenticated($request, $user);
     }

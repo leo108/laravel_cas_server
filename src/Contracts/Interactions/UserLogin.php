@@ -28,6 +28,12 @@ interface UserLogin
 
     /**
      * @param Request $request
+     * @return Response
+     */
+    public function showAuthenticateFailed(Request $request);
+
+    /**
+     * @param Request $request
      * @param string  $jumpUrl
      * @param string  $service
      * @return Response
