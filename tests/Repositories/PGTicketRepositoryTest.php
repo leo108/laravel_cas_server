@@ -10,6 +10,7 @@ namespace Leo108\CAS\Repositories;
 
 
 use Exception;
+use Illuminate\Database\Eloquent\Model;
 use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\PGTicket;
@@ -161,6 +162,28 @@ class PGTicketRepositoryTest extends TestCase
         $this->assertNotNull(app()->make(PGTicketRepository::class)->getByTicket('what ever', false));
         $this->assertNotNull(app()->make(PGTicketRepository::class)->getByTicket('what ever'));
         $this->assertNull(app()->make(PGTicketRepository::class)->getByTicket('what ever'));
+    }
+
+    public function testInvalidTicketByUser()
+    {
+        $model      = Mockery::mock(Model::class)
+            ->shouldReceive('getKey')
+            ->andReturn(1)
+            ->once()
+            ->getMock();
+        $user       = Mockery::mock(UserModel::class)
+            ->shouldReceive('getEloquentModel')
+            ->andReturn($model)
+            ->once()
+            ->getMock();
+        $mockTicket = Mockery::mock(PGTicket::class)
+            ->shouldReceive('where')
+            ->with('user_id', 1)
+            ->andReturn(Mockery::mock()->shouldReceive('delete')->once()->getMock())
+            ->once()
+            ->getMock();
+        app()->instance(PGTicket::class, $mockTicket);
+        app()->make(PGTicketRepository::class)->invalidTicketByUser($user);
     }
 
     public function testGetAvailableTicket()

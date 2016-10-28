@@ -9,6 +9,7 @@
 namespace Leo108\CAS\Services;
 
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Log;
 
 class PGTCaller
 {
@@ -41,10 +42,16 @@ class PGTCaller
         parse_str(parse_url($pgtUrl, PHP_URL_QUERY), $originQuery);
 
         try {
-            $res = $this->client->get($pgtUrl, ['query' => array_merge($originQuery, $query)]);
+            $option = [
+                'query'  => array_merge($originQuery, $query),
+                'verify' => config('cas.verify_ssl', true),
+            ];
+            $res    = $this->client->get($pgtUrl, $option);
 
             return $res->getStatusCode() == 200;
         } catch (\Exception $e) {
+            Log::warning('call pgt url failed, msg:'.$e->getMessage());
+
             return false;
         }
     }

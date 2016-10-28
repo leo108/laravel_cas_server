@@ -204,7 +204,7 @@ class ValidateController extends Controller
         if ($pgtUrl) {
             try {
                 $pgTicket = $this->pgTicketRepository->applyTicket($user, $pgtUrl, $proxies);
-                $iou      = $this->ticketGenerator->generateOne(config('cas.ticket_len', 32), 'PGTIOU-');
+                $iou      = $this->ticketGenerator->generateOne(config('cas.pg_ticket_iou_len', 64), 'PGTIOU-');
                 if (!$this->pgtCaller->call($pgtUrl, $pgTicket->ticket, $iou)) {
                     $iou = null;
                 }

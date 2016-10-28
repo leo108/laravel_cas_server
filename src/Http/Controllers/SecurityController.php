@@ -14,6 +14,7 @@ use Leo108\CAS\Events\CasUserLoginEvent;
 use Leo108\CAS\Events\CasUserLogoutEvent;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Illuminate\Http\Request;
+use Leo108\CAS\Repositories\PGTicketRepository;
 use Leo108\CAS\Repositories\ServiceRepository;
 use Leo108\CAS\Repositories\TicketRepository;
 
@@ -30,24 +31,31 @@ class SecurityController extends Controller
     protected $ticketRepository;
 
     /**
+     * @var PGTicketRepository
+     */
+    protected $pgTicketRepository;
+    /**
      * @var UserLogin
      */
     protected $loginInteraction;
 
     /**
      * SecurityController constructor.
-     * @param ServiceRepository $serviceRepository
-     * @param TicketRepository  $ticketRepository
-     * @param UserLogin         $loginInteraction
+     * @param ServiceRepository  $serviceRepository
+     * @param TicketRepository   $ticketRepository
+     * @param PGTicketRepository $pgTicketRepository
+     * @param UserLogin          $loginInteraction
      */
     public function __construct(
         ServiceRepository $serviceRepository,
         TicketRepository $ticketRepository,
+        PGTicketRepository $pgTicketRepository,
         UserLogin $loginInteraction
     ) {
-        $this->serviceRepository = $serviceRepository;
-        $this->ticketRepository  = $ticketRepository;
-        $this->loginInteraction  = $loginInteraction;
+        $this->serviceRepository  = $serviceRepository;
+        $this->ticketRepository   = $ticketRepository;
+        $this->loginInteraction   = $loginInteraction;
+        $this->pgTicketRepository = $pgTicketRepository;
     }
 
     public function showLogin(Request $request)
@@ -119,6 +127,7 @@ class SecurityController extends Controller
         $user = $this->loginInteraction->getCurrentUser($request);
         if ($user) {
             $this->loginInteraction->logout($request);
+            $this->pgTicketRepository->invalidTicketByUser($user);
             event(new CasUserLogoutEvent($request, $user));
         }
         $service = $request->get('service');

@@ -63,6 +63,14 @@ class PGTicketRepository
 
     /**
      * @param UserModel $user
+     */
+    public function invalidTicketByUser(UserModel $user)
+    {
+        $this->pgTicket->where('user_id', $user->getEloquentModel()->getKey())->delete();
+    }
+
+    /**
+     * @param UserModel $user
      * @param string    $pgtUrl
      * @param array     $proxies
      * @return PGTicket
@@ -75,14 +83,14 @@ class PGTicketRepository
             throw new CasException(CasException::UNAUTHORIZED_SERVICE_PROXY);
         }
 
-        $ticket = $this->getAvailableTicket(config('cas.ticket_len', 32));
+        $ticket = $this->getAvailableTicket(config('cas.pg_ticket_len', 64));
         if ($ticket === false) {
             throw new CasException(CasException::INTERNAL_ERROR, 'apply proxy-granting ticket failed');
         }
         $record = $this->pgTicket->newInstance(
             [
                 'ticket'     => $ticket,
-                'expire_at'  => new Carbon(sprintf('+%dsec', config('cas.ticket_expire', 300))),
+                'expire_at'  => new Carbon(sprintf('+%dsec', config('cas.pg_ticket_expire', 7200))),
                 'created_at' => new Carbon(),
                 'pgt_url'    => $pgtUrl,
                 'proxies'    => $proxies,

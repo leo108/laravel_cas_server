@@ -15,6 +15,7 @@ use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Events\CasUserLoginEvent;
 use Leo108\CAS\Events\CasUserLogoutEvent;
 use Leo108\CAS\Exceptions\CAS\CasException;
+use Leo108\CAS\Repositories\PGTicketRepository;
 use Leo108\CAS\Repositories\ServiceRepository;
 use Leo108\CAS\Repositories\TicketRepository;
 use TestCase;
@@ -283,6 +284,7 @@ class SecurityControllerTest extends TestCase
 
     public function testLogoutWithoutService()
     {
+        $user             = Mockery::mock(UserModel::class);
         $request          = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service'])
@@ -293,7 +295,7 @@ class SecurityControllerTest extends TestCase
             ->shouldReceive('logout')
             ->once()
             ->shouldReceive('getCurrentUser')
-            ->andReturn(Mockery::mock(UserModel::class))
+            ->andReturn($user)
             ->once()
             ->shouldReceive('showLoggedOut')
             ->with($request)
@@ -301,12 +303,19 @@ class SecurityControllerTest extends TestCase
             ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
+        $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
+            ->shouldReceive('invalidTicketByUser')
+            ->with($user)
+            ->once()
+            ->getMock();
+        app()->instance(PGTicketRepository::class, $pgTicketRepository);
         $this->expectsEvents(CasUserLogoutEvent::class);
         $this->assertEquals('showLoggedOut called', app(SecurityController::class)->logout($request));
     }
 
     public function testLogoutWithValidService()
     {
+        $user              = Mockery::mock(UserModel::class);
         $serviceRepository = Mockery::mock(ServiceRepository::class)
             ->shouldReceive('isUrlValid')
             ->andReturn(true)
@@ -317,16 +326,22 @@ class SecurityControllerTest extends TestCase
             ->shouldReceive('logout')
             ->once()
             ->shouldReceive('getCurrentUser')
-            ->andReturn(Mockery::mock(UserModel::class))
+            ->andReturn($user)
             ->once()
             ->getMock();
         app()->instance(UserLogin::class, $loginInteraction);
-        $request = Mockery::mock(Request::class)
+        $request            = Mockery::mock(Request::class)
             ->shouldReceive('get')
             ->withArgs(['service'])
             ->andReturn('http://leo108.com')
             ->once()
             ->getMock();
+        $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
+            ->shouldReceive('invalidTicketByUser')
+            ->with($user)
+            ->once()
+            ->getMock();
+        app()->instance(PGTicketRepository::class, $pgTicketRepository);
         $this->expectsEvents(CasUserLogoutEvent::class);
         $resp = app(SecurityController::class)->logout($request);
         $this->assertInstanceOf(RedirectResponse::class, $resp);
@@ -373,6 +388,7 @@ class SecurityControllerTest extends TestCase
             [
                 app(ServiceRepository::class),
                 app(TicketRepository::class),
+                app(PGTicketRepository::class),
                 app(UserLogin::class),
             ]
         );
