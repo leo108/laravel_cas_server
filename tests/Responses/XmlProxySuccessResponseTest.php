@@ -15,15 +15,17 @@ class XmlProxySuccessResponseTest extends TestCase
 {
     public function testSetProxyTicket()
     {
-        $resp = new XmlProxySuccessResponse();
+        $resp    = new XmlProxySuccessResponse();
+        $content = $this->getXML($resp);
+        $this->assertNotContains('cas:proxyTicket', $content);
         $resp->setProxyTicket('proxy ticket1');
         $content = $this->getXML($resp);
-        $this->assertContains('cas:proxySuccess', $content);
+        $this->assertContains('cas:proxyTicket', $content);
         $this->assertContains('proxy ticket1', $content);
 
         $resp->setProxyTicket('proxy ticket2');
         $content = $this->getXML($resp);
-        $this->assertContains('cas:proxySuccess', $content);
+        $this->assertContains('cas:proxyTicket', $content);
         $this->assertNotContains('proxy ticket1', $content);
         $this->assertContains('proxy ticket2', $content);
     }

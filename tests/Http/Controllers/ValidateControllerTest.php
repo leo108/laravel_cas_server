@@ -634,9 +634,11 @@ class ValidateControllerTest extends TestCase
             ->once()
             ->getMock();
         app()->instance(TicketRepository::class, $ticketRepository);
+        $pgTicket           = Mockery::mock();
+        $pgTicket->ticket   = 'some string';
         $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
             ->shouldReceive('applyTicket')
-            ->andReturn('some string')
+            ->andReturn($pgTicket)
             ->once()
             ->getMock();
         app()->instance(PGTicketRepository::class, $pgTicketRepository);
@@ -699,9 +701,11 @@ class ValidateControllerTest extends TestCase
             ->once()
             ->getMock();
         app()->instance(TicketRepository::class, $ticketRepository);
+        $pgTicket           = Mockery::mock();
+        $pgTicket->ticket   = 'some string';
         $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
             ->shouldReceive('applyTicket')
-            ->andReturn('some string')
+            ->andReturn($pgTicket)
             ->once()
             ->getMock();
         app()->instance(PGTicketRepository::class, $pgTicketRepository);
@@ -768,9 +772,11 @@ class ValidateControllerTest extends TestCase
             ->once()
             ->getMock();
         app()->instance(TicketRepository::class, $ticketRepository);
+        $pgTicket           = Mockery::mock();
+        $pgTicket->ticket   = 'some string';
         $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
             ->shouldReceive('applyTicket')
-            ->andReturn('some string')
+            ->andReturn($pgTicket)
             ->once()
             ->getMock();
         app()->instance(PGTicketRepository::class, $pgTicketRepository);

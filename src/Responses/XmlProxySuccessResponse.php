@@ -29,8 +29,8 @@ class XmlProxySuccessResponse extends BaseXmlResponse implements ProxySuccessRes
     public function setProxyTicket($ticket)
     {
         $proxyNode = $this->getProxyNode();
-        $this->removeByXPath($proxyNode, 'cas:proxySuccess');
-        $proxyNode->addChild('cas:proxySuccess', $ticket);
+        $this->removeByXPath($proxyNode, 'cas:proxyTicket');
+        $proxyNode->addChild('cas:proxyTicket', $ticket);
 
         return $this;
     }
