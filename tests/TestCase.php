@@ -50,7 +50,7 @@ class TestCase extends Illuminate\Foundation\Testing\TestCase
         $this->app['config']->set('database.default', 'sqlite');
         $this->app['config']->set('database.connections.sqlite.database', ':memory:');
 
-        $this->migrate();
+        //$this->migrate();
     }
 
     /**
