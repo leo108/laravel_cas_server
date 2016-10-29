@@ -33,6 +33,6 @@ class CreateProxyGrantingTicketsTable extends Migration
      */
     public function down()
     {
-        Schema::drop('proxy_granting_tickets');
+        Schema::drop('cas_proxy_granting_tickets');
     }
 }
