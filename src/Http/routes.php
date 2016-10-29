@@ -14,11 +14,14 @@ Route::group(
     function () {
         $auth = config('cas.middleware.auth');
         $p    = config('cas.router.name_prefix');
-        Route::get('login', ['as' => $p.'login_page', 'uses' => 'SecurityController@showLogin']);
-        Route::post('login', ['as' => $p.'login_action', 'uses' => 'SecurityController@login']);
-        Route::get('logout', ['as' => $p.'logout', 'uses' => 'SecurityController@logout'])->middleware($auth);
-        Route::any('validate', ['as' => $p.'v1validate', 'uses' => 'ValidateController@v1ValidateAction']);
-        Route::any('serviceValidate', ['as' => $p.'v2validate', 'uses' => 'ValidateController@v2ValidateAction']);
-        Route::any('p3/serviceValidate', ['as' => $p.'v3validate', 'uses' => 'ValidateController@v3ValidateAction']);
+        Route::get('login', 'SecurityController@showLogin')->name($p.'login.get');
+        Route::post('login', 'SecurityController@login')->name($p.'login.post');
+        Route::get('logout', 'SecurityController@logout')->name($p.'logout')->middleware($auth);
+        Route::any('validate', 'ValidateController@v1ValidateAction')->name($p.'v1.validate');
+        Route::any('serviceValidate', 'ValidateController@v2ServiceValidateAction')->name($p.'v2.validate.service');
+        Route::any('proxyValidate', 'ValidateController@v2ProxyValidateAction')->name($p.'v2.validate.proxy');
+        Route::any('proxy', 'ValidateController@proxyAction')->name($p.'proxy');
+        Route::any('p3/serviceValidate', 'ValidateController@v3ServiceValidateAction')->name($p.'v3.validate.service');
+        Route::any('p3/proxyValidate', 'ValidateController@v3ProxyValidateAction')->name($p.'v3.validate.proxy');
     }
 );

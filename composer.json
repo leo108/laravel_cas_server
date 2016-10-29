@@ -11,7 +11,9 @@
     ],
     "require": {
         "php": ">=5.5.9",
-        "laravel/framework": "5.1.*|5.2.*|5.3.*"
+        "ext-dom": "*",
+        "laravel/framework": "5.1.*|5.2.*|5.3.*",
+        "guzzlehttp/guzzle": "^6.2"
     },
     "require-dev": {
         "mockery/mockery": "0.9.*",

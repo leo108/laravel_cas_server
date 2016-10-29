@@ -50,7 +50,7 @@ class TestCase extends Illuminate\Foundation\Testing\TestCase
         $this->app['config']->set('database.default', 'sqlite');
         $this->app['config']->set('database.connections.sqlite.database', ':memory:');
 
-        $this->migrate();
+        //$this->migrate();
     }
 
     /**
@@ -75,5 +75,23 @@ class TestCase extends Illuminate\Foundation\Testing\TestCase
         $fileSystem->requireOnce($usersMigrationFile);
         $migrationClass = $classFinder->findClass($usersMigrationFile);
         (new $migrationClass())->up();
+    }
+
+    protected static function getNonPublicMethod($obj, $name)
+    {
+        $class  = new ReflectionClass($obj);
+        $method = $class->getMethod($name);
+        $method->setAccessible(true);
+
+        return $method;
+    }
+
+    protected static function getNonPublicProperty($obj, $name)
+    {
+        $class    = new ReflectionClass($obj);
+        $property = $class->getProperty($name);
+        $property->setAccessible(true);
+
+        return $property;
     }
 }

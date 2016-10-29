@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Leo108\CAS\Models\Ticket;
+use Leo108\CAS\Services\TicketGenerator;
 
 class TicketRepository
 {
@@ -26,30 +27,37 @@ class TicketRepository
     protected $serviceRepository;
 
     /**
+     * @var TicketGenerator
+     */
+    protected $ticketGenerator;
+
+    /**
      * TicketRepository constructor.
      * @param Ticket            $ticket
      * @param ServiceRepository $serviceRepository
+     * @param TicketGenerator   $ticketGenerator
      */
-    public function __construct(Ticket $ticket, ServiceRepository $serviceRepository)
+    public function __construct(Ticket $ticket, ServiceRepository $serviceRepository, TicketGenerator $ticketGenerator)
     {
         $this->ticket            = $ticket;
         $this->serviceRepository = $serviceRepository;
+        $this->ticketGenerator   = $ticketGenerator;
     }
-
 
     /**
      * @param UserModel $user
      * @param string    $serviceUrl
+     * @param array     $proxies
      * @throws CasException
      * @return \Leo108\CAS\Models\Ticket
      */
-    public function applyTicket(UserModel $user, $serviceUrl)
+    public function applyTicket(UserModel $user, $serviceUrl, $proxies = [])
     {
         $service = $this->serviceRepository->getServiceByUrl($serviceUrl);
         if (!$service) {
             throw new CasException(CasException::INVALID_SERVICE);
         }
-        $ticket = $this->getAvailableTicket(config('cas.ticket_len', 32));
+        $ticket = $this->getAvailableTicket(config('cas.ticket_len', 32), empty($proxies) ? 'ST-' : 'PT-');
         if ($ticket === false) {
             throw new CasException(CasException::INTERNAL_ERROR, 'apply ticket failed');
         }
@@ -59,6 +67,7 @@ class TicketRepository
                 'expire_at'   => new Carbon(sprintf('+%dsec', config('cas.ticket_expire', 300))),
                 'created_at'  => new Carbon(),
                 'service_url' => $serviceUrl,
+                'proxies'     => $proxies,
             ]
         );
         $record->user()->associate($user->getEloquentModel());
@@ -71,16 +80,16 @@ class TicketRepository
     /**
      * @param string $ticket
      * @param bool   $checkExpired
-     * @return bool|Ticket
+     * @return null|Ticket
      */
     public function getByTicket($ticket, $checkExpired = true)
     {
         $record = $this->ticket->where('ticket', $ticket)->first();
         if (!$record) {
-            return false;
+            return null;
         }
 
-        return ($checkExpired && $record->isExpired()) ? false : $record;
+        return ($checkExpired && $record->isExpired()) ? null : $record;
     }
 
     /**
@@ -93,27 +102,19 @@ class TicketRepository
     }
 
     /**
-     * @param $totalLength
-     * @return bool|string
+     * @param integer $totalLength
+     * @param string  $prefix
+     * @return string|false
      */
-    protected function getAvailableTicket($totalLength)
+    protected function getAvailableTicket($totalLength, $prefix)
     {
-        $prefix = 'ST-';
-        $ticket = false;
-        $flag   = false;
-        for ($i = 0; $i < 10; $i++) {
-            $str    = bin2hex(random_bytes($totalLength));
-            $ticket = $prefix.substr($str, 0, $totalLength - strlen($prefix));
-            if (!$this->getByTicket($ticket, false)) {
-                $flag = true;
-                break;
-            }
-        }
-
-        if (!$flag) {
-            return false;
-        }
-
-        return $ticket;
+        return $this->ticketGenerator->generate(
+            $totalLength,
+            $prefix,
+            function ($ticket) {
+                return is_null($this->getByTicket($ticket, false));
+            },
+            10
+        );
     }
 }

@@ -9,10 +9,12 @@
 namespace Leo108\CAS\Http\Controllers;
 
 use Leo108\CAS\Contracts\Interactions\UserLogin;
+use Leo108\CAS\Contracts\Models\UserModel;
 use Leo108\CAS\Events\CasUserLoginEvent;
 use Leo108\CAS\Events\CasUserLogoutEvent;
 use Leo108\CAS\Exceptions\CAS\CasException;
 use Illuminate\Http\Request;
+use Leo108\CAS\Repositories\PGTicketRepository;
 use Leo108\CAS\Repositories\ServiceRepository;
 use Leo108\CAS\Repositories\TicketRepository;
 
@@ -29,24 +31,31 @@ class SecurityController extends Controller
     protected $ticketRepository;
 
     /**
+     * @var PGTicketRepository
+     */
+    protected $pgTicketRepository;
+    /**
      * @var UserLogin
      */
     protected $loginInteraction;
 
     /**
      * SecurityController constructor.
-     * @param ServiceRepository $serviceRepository
-     * @param TicketRepository  $ticketRepository
-     * @param UserLogin         $loginInteraction
+     * @param ServiceRepository  $serviceRepository
+     * @param TicketRepository   $ticketRepository
+     * @param PGTicketRepository $pgTicketRepository
+     * @param UserLogin          $loginInteraction
      */
     public function __construct(
         ServiceRepository $serviceRepository,
         TicketRepository $ticketRepository,
+        PGTicketRepository $pgTicketRepository,
         UserLogin $loginInteraction
     ) {
-        $this->serviceRepository = $serviceRepository;
-        $this->ticketRepository  = $ticketRepository;
-        $this->loginInteraction  = $loginInteraction;
+        $this->serviceRepository  = $serviceRepository;
+        $this->ticketRepository   = $ticketRepository;
+        $this->loginInteraction   = $loginInteraction;
+        $this->pgTicketRepository = $pgTicketRepository;
     }
 
     public function showLogin(Request $request)
@@ -77,7 +86,8 @@ class SecurityController extends Controller
                 return $this->loginInteraction->showLoginWarnPage($request, $url, $service);
             }
 
-            return $this->authenticated($request);
+            return $this->authenticated($request, $user);
+
         }
 
         return $this->loginInteraction->showLoginPage($request, $errors);
@@ -85,19 +95,16 @@ class SecurityController extends Controller
 
     public function login(Request $request)
     {
-        return $this->loginInteraction->login($request, array($this, 'authenticated'));
+        $user = $this->loginInteraction->login($request);
+        if (is_null($user)) {
+            return $this->loginInteraction->showAuthenticateFailed($request);
+        }
+
+        return $this->authenticated($request, $user);
     }
 
-    public function authenticated(Request $request)
+    public function authenticated(Request $request, UserModel $user)
     {
-        $user = $this->loginInteraction->getCurrentUser($request);
-        if ($user === null) {
-            //unreachable code
-            throw new CasException(
-                CasException::INTERNAL_ERROR,
-                'should call authenticated only after getCurrentUser return not null'
-            );
-        }
         event(new CasUserLoginEvent($request, $user));
         $serviceUrl = $request->get('service', '');
         if (!empty($serviceUrl)) {
@@ -117,11 +124,17 @@ class SecurityController extends Controller
 
     public function logout(Request $request)
     {
-        return $this->loginInteraction->logout(
-            $request,
-            function (Request $request) {
-                event(new CasUserLogoutEvent($request, $this->loginInteraction->getCurrentUser($request)));
-            }
-        );
+        $user = $this->loginInteraction->getCurrentUser($request);
+        if ($user) {
+            $this->loginInteraction->logout($request);
+            $this->pgTicketRepository->invalidTicketByUser($user);
+            event(new CasUserLogoutEvent($request, $user));
+        }
+        $service = $request->get('service');
+        if ($service && $this->serviceRepository->isUrlValid($service)) {
+            return redirect($service);
+        }
+
+        return $this->loginInteraction->showLoggedOut($request);
     }
 }
