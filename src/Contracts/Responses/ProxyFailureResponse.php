@@ -8,7 +8,6 @@
 
 namespace Leo108\CAS\Contracts\Responses;
 
-
 interface ProxyFailureResponse extends BaseResponse
 {
     /**

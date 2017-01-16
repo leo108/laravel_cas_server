@@ -25,6 +25,7 @@ use Leo108\CAS\Contracts\Models\UserModel;
  * @property Carbon    $created_at
  * @property Carbon    $expire_at
  * @property UserModel $user
+ * @property Service   $service
  */
 class Ticket extends Model
 {

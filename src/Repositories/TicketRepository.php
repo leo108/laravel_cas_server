@@ -49,7 +49,7 @@ class TicketRepository
      * @param string    $serviceUrl
      * @param array     $proxies
      * @throws CasException
-     * @return \Leo108\CAS\Models\Ticket
+     * @return Ticket
      */
     public function applyTicket(UserModel $user, $serviceUrl, $proxies = [])
     {
