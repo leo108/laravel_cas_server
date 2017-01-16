@@ -14,7 +14,7 @@ class CreateServicesTable extends Migration
     {
         Schema::create('cas_services', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name')->unique();
+            $table->string('name')->charset('utf8')->collate('utf8_general_ci')->unique();
             $table->boolean('enabled')->default(true);
             $table->timestamps();
         });

@@ -13,6 +13,8 @@ class CreateTicketsTable extends Migration
     public function up()
     {
         Schema::create('cas_tickets', function (Blueprint $table) {
+            $table->charset = 'utf8';
+            $table->collation = 'utf8_general_ci';
             $table->increments('id');
             $table->string('ticket', 32)->unique();
             $table->string('service_url', 1024);
