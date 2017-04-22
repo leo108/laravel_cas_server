@@ -28,7 +28,6 @@
     "autoload-dev": {
         "classmap": [
             "tests/TestCase.php",
-            "tests/_support/User.php",
             "tests/_support/SerializableModel.php"
         ]
     }
