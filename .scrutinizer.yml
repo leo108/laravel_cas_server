@@ -7,6 +7,7 @@ build:
   tests:
     override:
       -
+        idle_timeout: 600
         command: './vendor/bin/phpunit --coverage-clover=.coverage.xml'
         coverage:
             file: '.coverage.xml'
