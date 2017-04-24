@@ -13,6 +13,7 @@
         "php": ">=5.5.9",
         "ext-dom": "*",
         "illuminate/support": "5.1.*|5.2.*|5.3.*|5.4.*",
+        "doctrine/dbal": "^2.5",
         "guzzlehttp/guzzle": "^6.2"
     },
     "require-dev": {
