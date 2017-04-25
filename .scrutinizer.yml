@@ -3,11 +3,10 @@ build:
     php: '5.5.25'
   dependencies:
     before:
-      - composer install
+      - composer install -vvv
   tests:
     override:
       -
-        idle_timeout: 600
         command: './vendor/bin/phpunit --coverage-clover=.coverage.xml'
         coverage:
             file: '.coverage.xml'
