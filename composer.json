@@ -31,5 +31,12 @@
             "tests/TestCase.php",
             "tests/_support/SerializableModel.php"
         ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Leo108\\CAS\\CASServerServiceProvider"
+            ]
+        }
     }
 }

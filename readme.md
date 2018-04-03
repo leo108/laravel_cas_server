@@ -17,7 +17,7 @@ This package works for Laravel 5.5/5.6 . Please check 2.x branch if you are usin
 ## Installation && Usage
 
 - `composer require leo108/laravel_cas_server`
-- add `Leo108\CAS\CASServerServiceProvider::class` to the `providers` field in `config/app.php`
+- <del>add `Leo108\CAS\CASServerServiceProvider::class` to the `providers` field in `config/app.php`</del>
 - `php artisan vendor:publish --provider="Leo108\CAS\CASServerServiceProvider"`
 - modify `config/cas.php`, fields in config file are all self-described
 - `php artisan migrate`
