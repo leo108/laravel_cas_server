@@ -1,8 +1,8 @@
 # CAS Server for Laravel
 
-laravel_cas_server is a Laravel package that implements the server part of [CAS protocol](https://apereo.github.io/cas/4.2.x/protocol/CAS-Protocol-Specification.html) v1/v2/v3 without the proxy ticket part.
+laravel_cas_server is a Laravel package that implements the server part of [CAS protocol](https://apereo.github.io/cas/4.2.x/protocol/CAS-Protocol-Specification.html) v1/v2/v3.
 
-Currently this package works for Laravel 5.1/5.2/5.3/5.4 .
+This package works for Laravel 5.5/5.6 . Please check 2.x branch if you are using Laravel 5.1 - 5.4 .
 
 [![Latest Version](http://img.shields.io/github/release/leo108/laravel_cas_server.svg)](https://github.com/leo108/laravel_cas_server/releases)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
@@ -12,7 +12,7 @@ Currently this package works for Laravel 5.1/5.2/5.3/5.4 .
 
 ## Requirements
 
-- PHP >=5.5.9
+- PHP >=7.0
 
 ## Installation && Usage
 
