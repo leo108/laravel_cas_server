@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Leo108\CAS\Repositories\PGTicketRepository;
 use Leo108\CAS\Repositories\ServiceRepository;
 use Leo108\CAS\Repositories\TicketRepository;
+use function Leo108\CAS\cas_route;
 
 class SecurityController extends Controller
 {

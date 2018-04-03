@@ -21,7 +21,6 @@ class CASServerServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // TODO: Implement register() method.
     }
 
     /**
@@ -29,7 +28,7 @@ class CASServerServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        require __DIR__.'/Utils/helpers.php';
+        require __DIR__.'/helpers.php';
 
         if (!$this->app->routesAreCached()) {
             require __DIR__.'/Http/routes.php';
