@@ -149,7 +149,7 @@ class ValidateControllerTest extends TestCase
             ->makePartial()
             ->shouldAllowMockingProtectedMethods()
             ->shouldReceive('casValidate')
-            ->with($request, false, false)
+            ->with($request, true, false)
             ->andReturn('casValidate called')
             ->once()
             ->getMock();
