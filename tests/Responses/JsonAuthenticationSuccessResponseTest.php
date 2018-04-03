@@ -68,6 +68,15 @@ class JsonAuthenticationSuccessResponseTest extends TestCase
         $this->assertEquals(['serviceResponse' => ['authenticationSuccess' => ['attributes' => $attr2]]], $data);
     }
 
+    public function testSetMultiValuedAttributes()
+    {
+        $resp  = new JsonAuthenticationSuccessResponse();
+        $attr1 = ['key1' => ['value1', 'value2']];
+        $resp->setAttributes($attr1);
+        $data = $this->getData($resp);
+        $this->assertEquals(['serviceResponse' => ['authenticationSuccess' => ['attributes' => $attr1]]], $data);
+    }
+
     protected function getData(JsonAuthenticationSuccessResponse $resp)
     {
         $property = self::getNonPublicProperty($resp, 'data');

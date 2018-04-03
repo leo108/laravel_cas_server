@@ -49,9 +49,12 @@ class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements Authen
         $this->removeByXPath($authNode, 'cas:attributes');
         $attributesNode = $authNode->addChild('cas:attributes');
         foreach ($attributes as $key => $value) {
-            $str = $this->stringify($value);
-            if (is_string($str)) {
-                $attributesNode->addChild('cas:'.$key, $str);
+            $value_arr = (array) $value;
+            foreach($value_arr as $v){
+                $str = $this->stringify($v);
+                if (is_string($str)) {
+                    $attributesNode->addChild('cas:'.$key, $str);
+                }
             }
         }
 
