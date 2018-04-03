@@ -3,7 +3,7 @@ build:
     php: '5.5.25'
   dependencies:
     before:
-      - composer install -vvv
+      - composer install
   tests:
     override:
       -
