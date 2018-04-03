@@ -102,7 +102,7 @@ class ValidateController extends Controller
 
     public function v2ServiceValidateAction(Request $request)
     {
-        return $this->casValidate($request, false, false);
+        return $this->casValidate($request, true, false);
     }
 
     public function v3ServiceValidateAction(Request $request)
