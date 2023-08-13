@@ -1,0 +1,12 @@
+{
+    "serviceResponse": {
+        "authenticationSuccess": {
+            "user": "root@leo108.com",
+            "attributes": {
+                "first_name": "Leo",
+                "last_name": "Chen",
+                "email": "root@leo108.com"
+            }
+        }
+    }
+}

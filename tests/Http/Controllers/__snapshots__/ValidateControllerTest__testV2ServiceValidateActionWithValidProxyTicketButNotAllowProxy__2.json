@@ -1,0 +1,8 @@
+{
+    "serviceResponse": {
+        "authenticationFailure": {
+            "code": "INVALID_TICKET",
+            "description": "ticket is not valid"
+        }
+    }
+}

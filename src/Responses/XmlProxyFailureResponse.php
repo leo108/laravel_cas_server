@@ -6,18 +6,18 @@
  * Time: 17:48
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\ProxyFailureResponse;
+use Leo108\Cas\Contracts\Responses\ProxyFailureResponse;
 
 class XmlProxyFailureResponse extends BaseXmlResponse implements ProxyFailureResponse
 {
     /**
-     * @param string $code
-     * @param string $description
-     * @return $this
+     * @param  string  $code
+     * @param  string  $description
+     * @return static
      */
-    public function setFailure($code, $description)
+    public function setFailure(string $code, string $description): static
     {
         $this->removeByXPath($this->node, 'cas:proxyFailure');
         $authNode = $this->node->addChild('cas:proxyFailure', $description);

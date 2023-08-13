@@ -1,0 +1,8 @@
+{
+    "serviceResponse": {
+        "authenticationFailure": {
+            "code": "INTERNAL_ERROR",
+            "description": "try to lock ticket failed"
+        }
+    }
+}

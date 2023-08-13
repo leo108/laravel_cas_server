@@ -1,14 +1,9 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/25
- * Time: 14:40
- */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
-use TestCase;
+use Leo108\Cas\Responses\JsonAuthenticationFailureResponse;
+use Leo108\Cas\Tests\TestCase;
 
 class JsonAuthenticationFailureResponseTest extends TestCase
 {

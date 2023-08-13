@@ -6,20 +6,20 @@
  * Time: 12:40
  */
 
-namespace Leo108\CAS\Contracts;
+namespace Leo108\Cas\Contracts;
 
 interface TicketLocker
 {
     /**
-     * @param string $key
-     * @param int    $timeout
+     * @param  string  $key
+     * @param  int  $timeout
      * @return bool
      */
-    public function acquireLock($key, $timeout);
+    public function acquireLock(string $key, int $timeout): bool;
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
-    public function releaseLock($key);
+    public function releaseLock(string $key): bool;
 }

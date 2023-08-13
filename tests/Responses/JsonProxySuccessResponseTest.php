@@ -1,15 +1,9 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/27
- * Time: 07:24
- */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
-
-use TestCase;
+use Leo108\Cas\Responses\JsonProxySuccessResponse;
+use Leo108\Cas\Tests\TestCase;
 
 class JsonProxySuccessResponseTest extends TestCase
 {

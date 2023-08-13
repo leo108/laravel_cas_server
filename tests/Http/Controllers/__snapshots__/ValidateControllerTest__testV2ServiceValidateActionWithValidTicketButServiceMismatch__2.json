@@ -1,0 +1,8 @@
+{
+    "serviceResponse": {
+        "authenticationFailure": {
+            "code": "INVALID_SERVICE",
+            "description": "service is not valid"
+        }
+    }
+}

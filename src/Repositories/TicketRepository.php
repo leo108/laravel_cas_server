@@ -6,68 +6,62 @@
  * Time: 20:19
  */
 
-namespace Leo108\CAS\Repositories;
+namespace Leo108\Cas\Repositories;
 
-use Carbon\Carbon;
-use Leo108\CAS\Contracts\Models\UserModel;
-use Leo108\CAS\Exceptions\CAS\CasException;
-use Leo108\CAS\Models\Ticket;
-use Leo108\CAS\Services\TicketGenerator;
+use Leo108\Cas\Contracts\Models\UserModel;
+use Leo108\Cas\Exceptions\CasException;
+use Leo108\Cas\Models\Ticket;
+use Leo108\Cas\Services\CasConfig;
+use Leo108\Cas\Services\TicketGenerator;
 
 class TicketRepository
 {
-    /**
-     * @var Ticket
-     */
-    protected $ticket;
+    protected Ticket $ticket;
+    protected ServiceRepository $serviceRepository;
+    protected TicketGenerator $ticketGenerator;
+    protected CasConfig $casConfig;
 
-    /**
-     * @var ServiceRepository
-     */
-    protected $serviceRepository;
-
-    /**
-     * @var TicketGenerator
-     */
-    protected $ticketGenerator;
-
-    /**
-     * TicketRepository constructor.
-     * @param Ticket            $ticket
-     * @param ServiceRepository $serviceRepository
-     * @param TicketGenerator   $ticketGenerator
-     */
-    public function __construct(Ticket $ticket, ServiceRepository $serviceRepository, TicketGenerator $ticketGenerator)
-    {
-        $this->ticket            = $ticket;
+    public function __construct(
+        Ticket $ticket,
+        ServiceRepository $serviceRepository,
+        TicketGenerator $ticketGenerator,
+        CasConfig $casConfig
+    ) {
+        $this->ticket = $ticket;
         $this->serviceRepository = $serviceRepository;
-        $this->ticketGenerator   = $ticketGenerator;
+        $this->ticketGenerator = $ticketGenerator;
+        $this->casConfig = $casConfig;
     }
 
     /**
-     * @param UserModel $user
-     * @param string    $serviceUrl
-     * @param array     $proxies
-     * @throws CasException
-     * @return Ticket
+     * @param  \Leo108\Cas\Contracts\Models\UserModel  $user
+     * @param  string  $serviceUrl
+     * @param  list<string>  $proxies
+     * @return \Leo108\Cas\Models\Ticket
+     *
+     * @throws \Leo108\Cas\Exceptions\CasException
      */
-    public function applyTicket(UserModel $user, $serviceUrl, $proxies = [])
+    public function applyTicket(UserModel $user, string $serviceUrl, array $proxies = []): Ticket
     {
         $service = $this->serviceRepository->getServiceByUrl($serviceUrl);
-        if (!$service) {
+
+        if ($service === null) {
             throw new CasException(CasException::INVALID_SERVICE);
         }
-        $ticket = $this->getAvailableTicket(config('cas.ticket_len', 32), empty($proxies) ? 'ST-' : 'PT-');
+
+        $ticket = $this->getAvailableTicket($this->casConfig->ticket_len, count($proxies) === 0 ? 'ST-' : 'PT-');
+
         if ($ticket === false) {
             throw new CasException(CasException::INTERNAL_ERROR, 'apply ticket failed');
         }
+
         $record = $this->ticket->newInstance(
             [
-                'ticket'      => $ticket,
-                'expire_at'   => new Carbon(sprintf('+%dsec', config('cas.ticket_expire', 300))),
-                'created_at'  => new Carbon(),
+                'ticket' => $ticket,
+                'expire_at' => now()->addSeconds($this->casConfig->pg_ticket_expire),
+                'created_at' => now(),
                 'service_url' => $serviceUrl,
-                'proxies'     => $proxies,
+                'proxies' => $proxies,
             ]
         );
         $record->user()->associate($user->getEloquentModel());
@@ -78,40 +72,37 @@ class TicketRepository
     }
 
     /**
-     * @param string $ticket
-     * @param bool   $checkExpired
+     * @param  string  $ticket
+     * @param  bool  $checkExpired
      * @return null|Ticket
      */
-    public function getByTicket($ticket, $checkExpired = true)
+    public function getByTicket(string $ticket, bool $checkExpired = true): ?Ticket
     {
-        $record = $this->ticket->where('ticket', $ticket)->first();
-        if (!$record) {
+        $record = $this->ticket->newQuery()->where('ticket', $ticket)->first();
+
+        if ($record === null) {
             return null;
         }
 
         return ($checkExpired && $record->isExpired()) ? null : $record;
     }
 
-    /**
-     * @param Ticket $ticket
-     * @return bool|null
-     */
-    public function invalidTicket(Ticket $ticket)
+    public function invalidTicket(Ticket $ticket): void
     {
-        return $ticket->delete();
+        $ticket->delete();
     }
 
     /**
-     * @param integer $totalLength
-     * @param string  $prefix
+     * @param  int  $totalLength
+     * @param  string  $prefix
      * @return string|false
      */
-    protected function getAvailableTicket($totalLength, $prefix)
+    protected function getAvailableTicket(int $totalLength, string $prefix): string|false
     {
         return $this->ticketGenerator->generate(
             $totalLength,
             $prefix,
-            function ($ticket) {
+            function (string $ticket): bool {
                 return is_null($this->getByTicket($ticket, false));
             },
             10

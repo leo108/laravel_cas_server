@@ -6,17 +6,18 @@
  * Time: 15:17
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
+use Leo108\Cas\Responses\BaseJsonResponse;
+use Leo108\Cas\Tests\TestCase;
 use Symfony\Component\HttpFoundation\Response;
-use TestCase;
 
 class BaseJsonResponseTest extends TestCase
 {
     public function testToResponse()
     {
-        $data     = ['something' => 'test'];
-        $resp     = new BaseJsonResponse();
+        $data = ['something' => 'test'];
+        $resp = new BaseJsonResponse();
         $property = self::getNonPublicProperty($resp, 'data');
         $property->setValue($resp, $data);
         $ret = $resp->toResponse();

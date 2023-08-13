@@ -6,17 +6,19 @@
  * Time: 11:25
  */
 
-namespace Leo108\CAS;
+namespace Leo108\Cas;
+
+use Leo108\Cas\Services\CasConfig;
 
 /**
- * @param string $name
- * @param array  $parameters
- * @param bool   $absolute
+ * @param  string  $name
+ * @param  array<string,mixed>  $parameters
+ * @param  bool  $absolute
  * @return string
  */
-function cas_route($name, $parameters = [], $absolute = true)
+function cas_route(string $name, array $parameters = [], bool $absolute = true): string
 {
-    $name = config('cas.router.name_prefix').$name;
+    $name = app(CasConfig::class)->router['name_prefix'].$name;
 
     return route($name, $parameters, $absolute);
 }

@@ -1,0 +1,11 @@
+{
+    "serviceResponse": {
+        "authenticationSuccess": {
+            "user": "root@leo108.com",
+            "proxies": [
+                "https:\/\/proxy1.com",
+                "https:\/\/proxy2.com"
+            ]
+        }
+    }
+}

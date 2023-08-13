@@ -6,32 +6,33 @@
  * Time: 10:22
  */
 
-namespace Leo108\CAS\Services;
+namespace Leo108\Cas\Services;
 
 use Illuminate\Support\Str;
 
 class TicketGenerator
 {
     /**
-     * @param integer  $totalLength
-     * @param string   $prefix
-     * @param callable $checkFunc
-     * @param integer  $maxRetry
+     * @param  int  $totalLength
+     * @param  string  $prefix
+     * @param  callable(string):bool  $checkFunc
+     * @param  int  $maxRetry
      * @return string|false
      */
-    public function generate($totalLength, $prefix, callable $checkFunc, $maxRetry)
+    public function generate(int $totalLength, string $prefix, callable $checkFunc, int $maxRetry)
     {
         $ticket = false;
-        $flag   = false;
+        $flag = false;
         for ($i = 0; $i < $maxRetry; $i++) {
             $ticket = $this->generateOne($totalLength, $prefix);
-            if (call_user_func_array($checkFunc, [$ticket])) {
+
+            if (call_user_func($checkFunc, $ticket)) {
                 $flag = true;
                 break;
             }
         }
 
-        if (!$flag) {
+        if (! $flag) {
             return false;
         }
 
@@ -39,11 +40,11 @@ class TicketGenerator
     }
 
     /**
-     * @param integer $totalLength
-     * @param string  $prefix
+     * @param  int  $totalLength
+     * @param  string  $prefix
      * @return string
      */
-    public function generateOne($totalLength, $prefix)
+    public function generateOne(int $totalLength, string $prefix): string
     {
         return $prefix.Str::random($totalLength - strlen($prefix));
     }

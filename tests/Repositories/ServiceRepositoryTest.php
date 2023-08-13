@@ -1,48 +1,40 @@
 <?php
 
-namespace Leo108\CAS\Repositories;
+namespace Leo108\Cas\Tests\Repositories;
 
-use Mockery;
-use TestCase;
-use Leo108\CAS\Models\Service;
-use Leo108\CAS\Models\ServiceHost;
+use Leo108\Cas\Models\Service;
+use Leo108\Cas\Models\ServiceHost;
+use Leo108\Cas\Repositories\ServiceRepository;
+use Leo108\Cas\Tests\TestCase;
 
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/9/29
- * Time: 10:15
- */
 class ServiceRepositoryTest extends TestCase
 {
     public function testGetServiceByUrl()
     {
-        $serviceHost = Mockery::mock(ServiceHost::class);
-        $serviceHost->shouldReceive('where->first')->andReturn(null);
-        app()->instance(ServiceHost::class, $serviceHost);
-        $this->assertNull(app()->make(ServiceRepository::class)->getServiceByUrl('http://www.baidu.com'));
+        $this->assertNull(app()->make(ServiceRepository::class)->getServiceByUrl('https://leo108.com'));
 
-        $service     = Mockery::mock(Service::class);
-        $serviceHost = Mockery::mock(ServiceHost::class);
-        $serviceHost->shouldReceive('where->first')->andReturn((object) ['service' => $service]);
-        app()->instance(ServiceHost::class, $serviceHost);
-        $this->assertEquals($service, app()->make(ServiceRepository::class)->getServiceByUrl('http://www.baidu.com'));
+        $service = new Service(['name' => 'Test', 'enabled' => true, 'allow_proxy' => true]);
+        $service->save();
+        $serviceHost = new ServiceHost(['host' => 'leo108.com']);
+        $serviceHost->service()->associate($service);
+        $serviceHost->save();
+
+        $this->assertEquals($service->id, app()->make(ServiceRepository::class)->getServiceByUrl('https://leo108.com')->id);
     }
 
     public function testIsUrlValid()
     {
-        $serviceRepository = Mockery::mock(ServiceRepository::class)
-            ->makePartial()
-            ->shouldReceive('getServiceByUrl')
-            ->andReturn(null)
-            ->getMock();
-        $this->assertFalse($serviceRepository->isUrlValid('http://www.baidu.com'));
+        $this->assertFalse(app()->make(ServiceRepository::class)->isUrlValid('https://leo108.com'));
 
-        $serviceRepository = Mockery::mock(ServiceRepository::class)
-            ->makePartial()
-            ->shouldReceive('getServiceByUrl')
-            ->andReturn((object) ['enabled' => true])
-            ->getMock();
-        $this->assertTrue($serviceRepository->isUrlValid('http://www.baidu.com'));
+        $service = new Service(['name' => 'Test', 'enabled' => false, 'allow_proxy' => true]);
+        $service->save();
+        $serviceHost = new ServiceHost(['host' => 'leo108.com']);
+        $serviceHost->service()->associate($service);
+        $serviceHost->save();
+        $this->assertFalse(app()->make(ServiceRepository::class)->isUrlValid('https://leo108.com'));
+
+        $service->enabled = true;
+        $service->save();
+        $this->assertTrue(app()->make(ServiceRepository::class)->isUrlValid('https://leo108.com'));
     }
 }

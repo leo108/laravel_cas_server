@@ -6,55 +6,28 @@
  * Time: 20:13
  */
 
-namespace Leo108\CAS\Repositories;
+namespace Leo108\Cas\Repositories;
 
-use Leo108\CAS\Models\Service;
-use Leo108\CAS\Models\ServiceHost;
+use Leo108\Cas\Models\Service;
+use Leo108\Cas\Models\ServiceHost;
 
 class ServiceRepository
 {
-    /**
-     * @var Service
-     */
-    protected $service;
-
-    /**
-     * @var ServiceHost;
-     */
-    protected $serviceHost;
-
-    /**
-     * ServiceRepository constructor.
-     * @param Service     $service
-     * @param ServiceHost $serviceHost
-     */
-    public function __construct(Service $service, ServiceHost $serviceHost)
+    public function __construct(protected Service $service, protected ServiceHost $serviceHost)
     {
-        $this->service     = $service;
-        $this->serviceHost = $serviceHost;
     }
 
-    /**
-     * @param $url
-     * @return Service|null
-     */
-    public function getServiceByUrl($url)
+    public function getServiceByUrl(string $url): ?Service
     {
-        $host = parse_url($url, PHP_URL_HOST);
+        $host = \Safe\parse_url($url, PHP_URL_HOST);
 
-        $record = $this->serviceHost->where('host', $host)->first();
-        if (!$record) {
-            return null;
-        }
+        /** @var \Leo108\Cas\Models\ServiceHost|null $record */
+        $record = $this->serviceHost->newQuery()->where('host', $host)->first();
 
-        return $record->service;
+        return $record?->service;
     }
 
-    /**
-     * @param $url
-     * @return bool
-     */
-    public function isUrlValid($url)
+    public function isUrlValid(string $url): bool
     {
         $service = $this->getServiceByUrl($url);
 

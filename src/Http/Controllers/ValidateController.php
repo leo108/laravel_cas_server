@@ -6,62 +6,35 @@
  * Time: 14:52
  */
 
-namespace Leo108\CAS\Http\Controllers;
+namespace Leo108\Cas\Http\Controllers;
 
-use Illuminate\Support\Str;
-use Leo108\CAS\Contracts\TicketLocker;
-use Leo108\CAS\Repositories\PGTicketRepository;
-use Leo108\CAS\Repositories\TicketRepository;
-use Leo108\CAS\Exceptions\CAS\CasException;
-use Leo108\CAS\Models\Ticket;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Leo108\CAS\Responses\JsonAuthenticationFailureResponse;
-use Leo108\CAS\Responses\JsonAuthenticationSuccessResponse;
-use Leo108\CAS\Responses\JsonProxyFailureResponse;
-use Leo108\CAS\Responses\JsonProxySuccessResponse;
-use Leo108\CAS\Responses\XmlAuthenticationFailureResponse;
-use Leo108\CAS\Responses\XmlAuthenticationSuccessResponse;
-use Leo108\CAS\Responses\XmlProxyFailureResponse;
-use Leo108\CAS\Responses\XmlProxySuccessResponse;
-use Leo108\CAS\Services\PGTCaller;
-use Leo108\CAS\Services\TicketGenerator;
-use SimpleXMLElement;
+use Leo108\Cas\Contracts\TicketLocker;
+use Leo108\Cas\Exceptions\CasException;
+use Leo108\Cas\Models\Ticket;
+use Leo108\Cas\Repositories\PGTicketRepository;
+use Leo108\Cas\Repositories\TicketRepository;
+use Leo108\Cas\Responses\JsonAuthenticationFailureResponse;
+use Leo108\Cas\Responses\JsonAuthenticationSuccessResponse;
+use Leo108\Cas\Responses\JsonProxyFailureResponse;
+use Leo108\Cas\Responses\JsonProxySuccessResponse;
+use Leo108\Cas\Responses\XmlAuthenticationFailureResponse;
+use Leo108\Cas\Responses\XmlAuthenticationSuccessResponse;
+use Leo108\Cas\Responses\XmlProxyFailureResponse;
+use Leo108\Cas\Responses\XmlProxySuccessResponse;
+use Leo108\Cas\Services\CasConfig;
+use Leo108\Cas\Services\PGTCaller;
+use Leo108\Cas\Services\TicketGenerator;
+use Symfony\Component\HttpFoundation\Response;
 
 class ValidateController extends Controller
 {
-    /**
-     * @var TicketLocker
-     */
-    protected $ticketLocker;
-    /**
-     * @var TicketRepository
-     */
-    protected $ticketRepository;
+    protected TicketLocker $ticketLocker;
+    protected TicketRepository $ticketRepository;
+    protected PGTicketRepository $pgTicketRepository;
+    protected TicketGenerator $ticketGenerator;
+    protected PGTCaller $pgtCaller;
 
-    /**
-     * @var PGTicketRepository
-     */
-    protected $pgTicketRepository;
-
-    /**
-     * @var TicketGenerator
-     */
-    protected $ticketGenerator;
-
-    /**
-     * @var PGTCaller
-     */
-    protected $pgtCaller;
-
-    /**
-     * ValidateController constructor.
-     * @param TicketLocker       $ticketLocker
-     * @param TicketRepository   $ticketRepository
-     * @param PGTicketRepository $pgTicketRepository
-     * @param TicketGenerator    $ticketGenerator
-     * @param PGTCaller          $pgtCaller
-     */
     public function __construct(
         TicketLocker $ticketLocker,
         TicketRepository $ticketRepository,
@@ -69,30 +42,34 @@ class ValidateController extends Controller
         TicketGenerator $ticketGenerator,
         PGTCaller $pgtCaller
     ) {
-        $this->ticketLocker       = $ticketLocker;
-        $this->ticketRepository   = $ticketRepository;
+        $this->ticketLocker = $ticketLocker;
+        $this->ticketRepository = $ticketRepository;
         $this->pgTicketRepository = $pgTicketRepository;
-        $this->ticketGenerator    = $ticketGenerator;
-        $this->pgtCaller          = $pgtCaller;
+        $this->ticketGenerator = $ticketGenerator;
+        $this->pgtCaller = $pgtCaller;
     }
 
-    public function v1ValidateAction(Request $request)
+    public function v1ValidateAction(Request $request): Response
     {
-        $service = $request->get('service', '');
-        $ticket  = $request->get('ticket', '');
-        if (empty($service) || empty($ticket)) {
+        $service = $this->getStrFromRequest($request, 'service', '');
+        $ticket = $this->getStrFromRequest($request, 'ticket', '');
+
+        if ($service === '' || $ticket === '') {
             return new Response('no');
         }
 
-        if (!$this->lockTicket($ticket)) {
+        if (! $this->lockTicket($ticket)) {
             return new Response('no');
         }
+
         $record = $this->ticketRepository->getByTicket($ticket);
-        if (!$record || $record->service_url != $service) {
+
+        if ($record === null || $record->service_url != $service) {
             $this->unlockTicket($ticket);
 
             return new Response('no');
         }
+
         $this->ticketRepository->invalidTicket($record);
 
         $this->unlockTicket($ticket);
@@ -100,33 +77,33 @@ class ValidateController extends Controller
         return new Response('yes');
     }
 
-    public function v2ServiceValidateAction(Request $request)
+    public function v2ServiceValidateAction(Request $request): Response
     {
         return $this->casValidate($request, true, false);
     }
 
-    public function v3ServiceValidateAction(Request $request)
+    public function v3ServiceValidateAction(Request $request): Response
     {
         return $this->casValidate($request, true, false);
     }
 
-    public function v2ProxyValidateAction(Request $request)
+    public function v2ProxyValidateAction(Request $request): Response
     {
         return $this->casValidate($request, false, true);
     }
 
-    public function v3ProxyValidateAction(Request $request)
+    public function v3ProxyValidateAction(Request $request): Response
     {
         return $this->casValidate($request, true, true);
     }
 
-    public function proxyAction(Request $request)
+    public function proxyAction(Request $request): Response
     {
-        $pgt    = $request->get('pgt', '');
-        $target = $request->get('targetService', '');
-        $format = strtoupper($request->get('format', 'XML'));
+        $pgt = $this->getStrFromRequest($request, 'pgt', '');
+        $target = $this->getStrFromRequest($request, 'targetService', '');
+        $format = strtoupper($this->getStrFromRequest($request, 'format', 'XML'));
 
-        if (empty($pgt) || empty($target)) {
+        if ($pgt === '' || $target === '') {
             return $this->proxyFailureResponse(
                 CasException::INVALID_REQUEST,
                 'param pgt and targetService can not be empty',
@@ -135,10 +112,12 @@ class ValidateController extends Controller
         }
 
         $record = $this->pgTicketRepository->getByTicket($pgt);
+
         try {
-            if (!$record) {
+            if ($record === null) {
                 throw new CasException(CasException::INVALID_TICKET, 'ticket is not valid');
             }
+
             $proxies = $record->proxies;
             array_unshift($proxies, $record->pgt_url);
             $ticket = $this->ticketRepository->applyTicket($record->user, $target, $proxies);
@@ -149,18 +128,13 @@ class ValidateController extends Controller
         return $this->proxySuccessResponse($ticket->ticket, $format);
     }
 
-    /**
-     * @param Request $request
-     * @param bool    $returnAttr
-     * @param bool    $allowProxy
-     * @return Response
-     */
-    protected function casValidate(Request $request, $returnAttr, $allowProxy)
+    protected function casValidate(Request $request, bool $returnAttr, bool $allowProxy): Response
     {
-        $service = $request->get('service', '');
-        $ticket  = $request->get('ticket', '');
-        $format  = strtoupper($request->get('format', 'XML'));
-        if (empty($service) || empty($ticket)) {
+        $service = $this->getStrFromRequest($request, 'service', '');
+        $ticket = $this->getStrFromRequest($request, 'ticket', '');
+        $format = strtoupper($this->getStrFromRequest($request, 'format', 'XML'));
+
+        if ($service === '' || $ticket === '') {
             return $this->authFailureResponse(
                 CasException::INVALID_REQUEST,
                 'param service and ticket can not be empty',
@@ -168,22 +142,26 @@ class ValidateController extends Controller
             );
         }
 
-        if (!$this->lockTicket($ticket)) {
+        if (! $this->lockTicket($ticket)) {
             return $this->authFailureResponse(CasException::INTERNAL_ERROR, 'try to lock ticket failed', $format);
         }
 
         $record = $this->ticketRepository->getByTicket($ticket);
+
         try {
-            if (!$record || (!$allowProxy && $record->isProxy())) {
+            if ($record === null || (! $allowProxy && $record->isProxy())) {
                 throw new CasException(CasException::INVALID_TICKET, 'ticket is not valid');
             }
 
-            if ($record->service_url != $service) {
+            if ($record->service_url !== $service) {
                 throw new CasException(CasException::INVALID_SERVICE, 'service is not valid');
             }
         } catch (CasException $e) {
             //invalid ticket if error occur
-            $record instanceof Ticket && $this->ticketRepository->invalidTicket($record);
+            if ($record instanceof Ticket) {
+                $this->ticketRepository->invalidTicket($record);
+            }
+
             $this->unlockTicket($ticket);
 
             return $this->authFailureResponse($e->getCasErrorCode(), $e->getMessage(), $format);
@@ -199,13 +177,14 @@ class ValidateController extends Controller
         $this->unlockTicket($ticket);
 
         //handle pgt
-        $iou    = null;
-        $pgtUrl = $request->get('pgtUrl', '');
-        if ($pgtUrl) {
+        $iou = null;
+        $pgtUrl = $this->getStrFromRequest($request, 'pgtUrl', '');
+
+        if ($pgtUrl !== '') {
             try {
                 $pgTicket = $this->pgTicketRepository->applyTicket($user, $pgtUrl, $proxies);
-                $iou      = $this->ticketGenerator->generateOne(config('cas.pg_ticket_iou_len', 64), 'PGTIOU-');
-                if (!$this->pgtCaller->call($pgtUrl, $pgTicket->ticket, $iou)) {
+                $iou = $this->ticketGenerator->generateOne(app(CasConfig::class)->pg_ticket_iou_len, 'PGTIOU-');
+                if (! $this->pgtCaller->call($pgtUrl, $pgTicket->ticket, $iou)) {
                     $iou = null;
                 }
             } catch (CasException $e) {
@@ -213,20 +192,20 @@ class ValidateController extends Controller
             }
         }
 
-        $attr = $returnAttr ? $record->user->getCASAttributes() : [];
+        $attr = $returnAttr ? $record->user->getCasAttributes() : [];
 
         return $this->authSuccessResponse($record->user->getName(), $format, $attr, $proxies, $iou);
     }
 
     /**
-     * @param string      $username
-     * @param string      $format
-     * @param array       $attributes
-     * @param array       $proxies
-     * @param string|null $pgt
+     * @param  string  $username
+     * @param  string  $format
+     * @param  array<string,mixed>  $attributes
+     * @param  list<string>  $proxies
+     * @param  string|null  $pgt
      * @return Response
      */
-    protected function authSuccessResponse($username, $format, $attributes, $proxies = [], $pgt = null)
+    protected function authSuccessResponse(string $username, string $format, array $attributes, array $proxies = [], string $pgt = null): Response
     {
         if (strtoupper($format) === 'JSON') {
             $resp = app(JsonAuthenticationSuccessResponse::class);
@@ -234,10 +213,11 @@ class ValidateController extends Controller
             $resp = app(XmlAuthenticationSuccessResponse::class);
         }
         $resp->setUser($username);
-        if (!empty($attributes)) {
+
+        if (count($attributes) > 0) {
             $resp->setAttributes($attributes);
         }
-        if (!empty($proxies)) {
+        if (count($proxies) > 0) {
             $resp->setProxies($proxies);
         }
 
@@ -248,13 +228,7 @@ class ValidateController extends Controller
         return $resp->toResponse();
     }
 
-    /**
-     * @param string $code
-     * @param string $description
-     * @param string $format
-     * @return Response
-     */
-    protected function authFailureResponse($code, $description, $format)
+    protected function authFailureResponse(string $code, string $description, string $format): Response
     {
         if (strtoupper($format) === 'JSON') {
             $resp = app(JsonAuthenticationFailureResponse::class);
@@ -266,12 +240,7 @@ class ValidateController extends Controller
         return $resp->toResponse();
     }
 
-    /**
-     * @param string $ticket
-     * @param string $format
-     * @return Response
-     */
-    protected function proxySuccessResponse($ticket, $format)
+    protected function proxySuccessResponse(string $ticket, string $format): Response
     {
         if (strtoupper($format) === 'JSON') {
             $resp = app(JsonProxySuccessResponse::class);
@@ -283,13 +252,7 @@ class ValidateController extends Controller
         return $resp->toResponse();
     }
 
-    /**
-     * @param string $code
-     * @param string $description
-     * @param string $format
-     * @return Response
-     */
-    protected function proxyFailureResponse($code, $description, $format)
+    protected function proxyFailureResponse(string $code, string $description, string $format): Response
     {
         if (strtoupper($format) === 'JSON') {
             $resp = app(JsonProxyFailureResponse::class);
@@ -301,20 +264,12 @@ class ValidateController extends Controller
         return $resp->toResponse();
     }
 
-    /**
-     * @param string $ticket
-     * @return bool
-     */
-    protected function lockTicket($ticket)
+    protected function lockTicket(string $ticket): bool
     {
-        return $this->ticketLocker->acquireLock($ticket, config('cas.lock_timeout'));
+        return $this->ticketLocker->acquireLock($ticket, app(CasConfig::class)->lock_timeout);
     }
 
-    /**
-     * @param string $ticket
-     * @return bool
-     */
-    protected function unlockTicket($ticket)
+    protected function unlockTicket(string $ticket): bool
     {
         return $this->ticketLocker->releaseLock($ticket);
     }

@@ -6,31 +6,31 @@
  * Time: 15:54
  */
 
-namespace Leo108\CAS\Contracts\Responses;
+namespace Leo108\Cas\Contracts\Responses;
 
 interface AuthenticationSuccessResponse extends BaseResponse
 {
     /**
-     * @param string $user
-     * @return $this
+     * @param  string  $user
+     * @return static
      */
-    public function setUser($user);
+    public function setUser(string $user): static;
 
     /**
-     * @param array $proxies
-     * @return $this
+     * @param  list<string>  $proxies
+     * @return static
      */
-    public function setProxies($proxies);
+    public function setProxies(array $proxies): static;
 
     /**
-     * @param array $attributes
-     * @return $this
+     * @param  array<string,mixed>  $attributes
+     * @return static
      */
-    public function setAttributes($attributes);
+    public function setAttributes(array $attributes): static;
 
     /**
-     * @param array $ticket
-     * @return $this
+     * @param  string  $ticket
+     * @return static
      */
-    public function setProxyGrantingTicket($ticket);
+    public function setProxyGrantingTicket(string $ticket): static;
 }

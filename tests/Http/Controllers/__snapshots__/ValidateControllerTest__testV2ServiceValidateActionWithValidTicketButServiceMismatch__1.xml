@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas">
+  <cas:authenticationFailure code="INVALID_SERVICE">service is not valid</cas:authenticationFailure>
+</cas:serviceResponse>

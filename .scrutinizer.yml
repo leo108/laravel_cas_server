@@ -1,16 +1,16 @@
 build:
   environment:
-    php: '7'
+    php: '8'
   dependencies:
     before:
       - composer install
   tests:
     override:
       -
-        command: './vendor/bin/phpunit --coverage-clover=.coverage.xml'
+        command: 'composer phpunit -- --coverage-clover=.coverage.xml'
         coverage:
-            file: '.coverage.xml'
-            format: 'clover'
+          file: '.coverage.xml'
+          format: 'clover'
 filter:
   excluded_paths:
     - "database/"

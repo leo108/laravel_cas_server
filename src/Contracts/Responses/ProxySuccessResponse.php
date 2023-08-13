@@ -6,13 +6,13 @@
  * Time: 18:17
  */
 
-namespace Leo108\CAS\Contracts\Responses;
+namespace Leo108\Cas\Contracts\Responses;
 
 interface ProxySuccessResponse extends BaseResponse
 {
     /**
-     * @param string $ticket
-     * @return $this
+     * @param  string  $ticket
+     * @return static
      */
-    public function setProxyTicket($ticket);
+    public function setProxyTicket(string $ticket): static;
 }

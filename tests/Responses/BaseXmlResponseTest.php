@@ -1,48 +1,29 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/25
- * Time: 15:12
- */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
+use Leo108\Cas\Responses\BaseXmlResponse;
+use Leo108\Cas\Tests\TestCase;
 use Mockery;
-use SerializableModel;
+use Safe\Exceptions\JsonException;
 use SimpleXMLElement;
 use Symfony\Component\HttpFoundation\Response;
-use TestCase;
-
-function method_exists($obj, $method)
-{
-    return BaseXmlResponseTest::$functions->method_exists($obj, $method);
-}
 
 class BaseXmlResponseTest extends TestCase
 {
-    protected $testObj;
-    public static $functions;
+    protected BaseXmlResponse $testObj;
 
-    public function setUp()
+    public function setUp(): void
     {
-        $this->testObj   = new BaseXmlResponse();
-        self::$functions = Mockery::mock();
+        parent::setUp();
+        $this->testObj = new BaseXmlResponse();
     }
 
     public function testStringify()
     {
         $method = self::getNonPublicMethod($this->testObj, 'stringify');
 
-        $objWithToString = Mockery::mock()->shouldReceive('__toString')->andReturn('string from __toString');
-        self::$functions
-            ->shouldReceive('method_exists')
-            ->with($objWithToString, '__toString')
-            ->andReturn(true)
-            ->shouldReceive('method_exists')
-            ->andReturn(false);
-        $serializableModel = new SerializableModel();
-        $resource          = fopen(__FILE__, 'a');
+        $resource = fopen(__FILE__, 'a');
         $this->assertEquals('string', $method->invoke($this->testObj, 'string'));
         $this->assertEquals(json_encode([1, 2, 3]), $method->invoke($this->testObj, [1, 2, 3]));
         $this->assertEquals(json_encode(['key' => 'value']), $method->invoke($this->testObj, ['key' => 'value']));
@@ -50,16 +31,17 @@ class BaseXmlResponseTest extends TestCase
             json_encode(['key' => 'value']),
             $method->invoke($this->testObj, (object) ['key' => 'value'])
         );
-        $this->assertEquals($objWithToString->__toString(), $method->invoke($this->testObj, $objWithToString));
-        $this->assertEquals(serialize($serializableModel), $method->invoke($this->testObj, $serializableModel));
-        $this->assertFalse($method->invoke($this->testObj, $resource));
+
+        $this->expectException(JsonException::class);
+        $this->expectExceptionMessage('Type is not supported');
+        $method->invoke($this->testObj, $resource);
     }
 
     public function testRemoveXmlFirstLine()
     {
-        $xml    = new SimpleXMLElement('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
+        $xml = new SimpleXMLElement('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
         $method = self::getNonPublicMethod($this->testObj, 'removeXmlFirstLine');
-        $this->assertNotContains('<?xml version="1.0"?>', $method->invoke($this->testObj, $xml->asXML()));
+        $this->assertStringNotContainsString('<?xml version="1.0"?>', $method->invoke($this->testObj, $xml->asXML()));
 
         $normalStr = 'some string';
         $this->assertEquals($normalStr, $method->invoke($this->testObj, $normalStr));
@@ -69,18 +51,18 @@ class BaseXmlResponseTest extends TestCase
     {
         $xml = new SimpleXMLElement('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
         $xml->addChild('cas:tag', '123');
-        $this->assertContains('cas:tag', $xml->asXML());
-        $this->assertContains('123', $xml->asXML());
+        $this->assertStringContainsString('cas:tag', $xml->asXML());
+        $this->assertStringContainsString('123', $xml->asXML());
         $method = self::getNonPublicMethod($this->testObj, 'removeByXPath');
         $method->invoke($this->testObj, $xml, 'cas:tag');
-        $this->assertNotContains('cas:tag', $xml->asXML());
-        $this->assertNotContains('123', $xml->asXML());
+        $this->assertStringNotContainsString('cas:tag', $xml->asXML());
+        $this->assertStringNotContainsString('123', $xml->asXML());
     }
 
     public function testGetRootNode()
     {
         $method = self::getNonPublicMethod($this->testObj, 'getRootNode');
-        $this->assertContains(
+        $this->assertStringContainsString(
             '<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>',
             $method->invoke($this->testObj)->asXML()
         );

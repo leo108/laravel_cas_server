@@ -1,59 +1,38 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/27
- * Time: 07:08
- */
 
-namespace Leo108\CAS\Services;
+namespace Leo108\Cas\Tests\Services;
 
-use Mockery;
-use TestCase;
+use Leo108\Cas\Services\TicketGenerator;
+use Leo108\Cas\Tests\TestCase;
 
 class TicketGeneratorTest extends TestCase
 {
     public function testGenerate()
     {
-        $generator = Mockery::mock(TicketGenerator::class)
-            ->makePartial()
-            ->shouldReceive('generateOne')
-            ->andReturn('some string')
-            ->times(5)
-            ->getMock();
+        $count = 0;
+        $generator = new TicketGenerator();
 
-        $funcObj = Mockery::mock()
-            ->shouldReceive('check')
-            ->andReturnValues([false, false, false, false, true])
-            ->times(5)
-            ->getMock();
+        $this->assertNotFalse($generator->generate(32, 'ST-', function () use (&$count): bool {
+            $count++;
 
-        $this->assertNotFalse($generator->generate(32, 'ST-', [$funcObj, 'check'], 10));
+            return $count > 5;
+        }, 10));
+
+        $this->assertEquals(6, $count);
     }
 
     public function testGenerateButAlwaysCheckFailed()
     {
-        $generator = Mockery::mock(TicketGenerator::class)
-            ->makePartial()
-            ->shouldReceive('generateOne')
-            ->andReturn('some string')
-            ->times(10)
-            ->getMock();
+        $generator = new TicketGenerator();
 
-        $funcObj = Mockery::mock()
-            ->shouldReceive('check')
-            ->andReturn(false)
-            ->times(10)
-            ->getMock();
-
-        $this->assertFalse($generator->generate(32, 'ST-', [$funcObj, 'check'], 10));
+        $this->assertFalse($generator->generate(32, 'ST-', fn (): bool => false, 10));
     }
 
     public function testGenerateOne()
     {
         $totalLength = 32;
-        $generator   = app(TicketGenerator::class);
-        $prefixArr   = ['PGTIOU-', 'PGT-', 'ST-', 'PT-'];
+        $generator = app(TicketGenerator::class);
+        $prefixArr = ['PGTIOU-', 'PGT-', 'ST-', 'PT-'];
         foreach ($prefixArr as $prefix) {
             $ticket = $generator->generateOne($totalLength, $prefix);
             $this->assertEquals($totalLength, strlen($ticket));

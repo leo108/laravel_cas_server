@@ -6,22 +6,19 @@
  * Time: 15:16
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
 use Symfony\Component\HttpFoundation\Response;
 
 class BaseJsonResponse
 {
     /**
-     * @var array
+     * @var array<string,mixed>
      */
-    protected $data;
+    protected array $data;
 
-    /**
-     * @return Response
-     */
-    public function toResponse()
+    public function toResponse(): Response
     {
-        return new Response(json_encode($this->data), 200, ['Content-Type' => 'application/json']);
+        return new Response(\Safe\json_encode($this->data), 200, ['Content-Type' => 'application/json']);
     }
 }

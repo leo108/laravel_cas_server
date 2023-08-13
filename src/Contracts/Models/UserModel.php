@@ -6,7 +6,7 @@
  * Time: 07:26
  */
 
-namespace Leo108\CAS\Contracts\Models;
+namespace Leo108\Cas\Contracts\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,17 +17,17 @@ interface UserModel
      *
      * @return string
      */
-    public function getName();
+    public function getName(): string;
 
     /**
      * Get user's attributes
      *
-     * @return array
+     * @return array<string,mixed>
      */
-    public function getCASAttributes();
+    public function getCasAttributes(): array;
 
     /**
-     * @return Model
+     * @return \Illuminate\Database\Eloquent\Model
      */
-    public function getEloquentModel();
+    public function getEloquentModel(): Model;
 }

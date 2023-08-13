@@ -1,57 +1,25 @@
 <?php
 
-namespace Leo108\CAS\Events;
+namespace Leo108\Cas\Events;
 
 use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
-use Leo108\CAS\Contracts\Models\UserModel;
+use Leo108\Cas\Contracts\Models\UserModel;
 
 class CasUserLoginEvent extends Event
 {
     use SerializesModels;
 
-    /**
-     * @var Request
-     */
-    protected $request;
-    /**
-     * @var UserModel
-     */
-    protected $user;
-
-    /**
-     * CasUserLoginEvent constructor.
-     * @param Request   $request
-     * @param UserModel $user
-     */
-    public function __construct(Request $request, UserModel $user)
+    public function __construct(protected Request $request, protected UserModel $user)
     {
-        $this->request = $request;
-        $this->user    = $user;
     }
 
-    /**
-     * Get the channels the event should be broadcast on.
-     *
-     * @return array
-     */
-    public function broadcastOn()
-    {
-        return [];
-    }
-
-    /**
-     * @return Request
-     */
-    public function getRequest()
+    public function getRequest(): Request
     {
         return $this->request;
     }
 
-    /**
-     * @return UserModel
-     */
-    public function getUser()
+    public function getUser(): UserModel
     {
         return $this->user;
     }

@@ -6,9 +6,9 @@
  * Time: 16:01
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\AuthenticationSuccessResponse;
+use Leo108\Cas\Contracts\Responses\AuthenticationSuccessResponse;
 use SimpleXMLElement;
 
 class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements AuthenticationSuccessResponse
@@ -22,7 +22,7 @@ class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements Authen
         $this->node->addChild('cas:authenticationSuccess');
     }
 
-    public function setUser($user)
+    public function setUser(string $user): static
     {
         $authNode = $this->getAuthNode();
         $this->removeByXPath($authNode, 'cas:user');
@@ -31,7 +31,7 @@ class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements Authen
         return $this;
     }
 
-    public function setProxies($proxies)
+    public function setProxies(array $proxies): static
     {
         $authNode = $this->getAuthNode();
         $this->removeByXPath($authNode, 'cas:proxies');
@@ -43,25 +43,23 @@ class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements Authen
         return $this;
     }
 
-    public function setAttributes($attributes)
+    public function setAttributes(array $attributes): static
     {
         $authNode = $this->getAuthNode();
         $this->removeByXPath($authNode, 'cas:attributes');
         $attributesNode = $authNode->addChild('cas:attributes');
         foreach ($attributes as $key => $value) {
             $valueArr = (array) $value;
-            foreach($valueArr as $v){
-                $str = $this->stringify($v);
-                if (is_string($str)) {
-                    $attributesNode->addChild('cas:'.$key, $str);
-                }
+
+            foreach ($valueArr as $v) {
+                $attributesNode->addChild('cas:'.$key, $this->stringify($v));
             }
         }
 
         return $this;
     }
 
-    public function setProxyGrantingTicket($ticket)
+    public function setProxyGrantingTicket(string $ticket): static
     {
         $authNode = $this->getAuthNode();
         $this->removeByXPath($authNode, 'cas:proxyGrantingTicket');
@@ -70,13 +68,11 @@ class XmlAuthenticationSuccessResponse extends BaseXmlResponse implements Authen
         return $this;
     }
 
-    /**
-     * @return SimpleXMLElement
-     */
-    protected function getAuthNode()
+    protected function getAuthNode(): SimpleXMLElement
     {
         $authNodes = $this->node->xpath('cas:authenticationSuccess');
-        if (count($authNodes) < 1) {
+
+        if ($authNodes === null || $authNodes === false || count($authNodes) < 1) {
             return $this->node->addChild('cas:authenticationSuccess');
         }
 

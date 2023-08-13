@@ -1,0 +1,11 @@
+parameters:
+    level: 9
+    editorUrl: 'phpstorm://open?file=%%file%%&line=%%line%%'
+    checkGenericClassInNonGenericObjectType: false
+    paths:
+        - src
+    ignoreErrors:
+        - '~Dynamic call to static method .+~'
+        -
+            message: "~Cannot access offset '.+?' on mixed.~"
+            path: src/Responses

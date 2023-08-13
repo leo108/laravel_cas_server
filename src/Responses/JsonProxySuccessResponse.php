@@ -6,9 +6,9 @@
  * Time: 18:19
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\ProxySuccessResponse;
+use Leo108\Cas\Contracts\Responses\ProxySuccessResponse;
 
 class JsonProxySuccessResponse extends BaseJsonResponse implements ProxySuccessResponse
 {
@@ -20,8 +20,10 @@ class JsonProxySuccessResponse extends BaseJsonResponse implements ProxySuccessR
         $this->data = ['serviceResponse' => ['proxySuccess' => []]];
     }
 
-    public function setProxyTicket($ticket)
+    public function setProxyTicket(string $ticket): static
     {
         $this->data['serviceResponse']['proxySuccess']['proxyTicket'] = $ticket;
+
+        return $this;
     }
 }

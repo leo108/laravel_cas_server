@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas">
+  <cas:authenticationSuccess>
+    <cas:user>root@leo108.com</cas:user>
+    <cas:attributes>
+      <cas:first_name>Leo</cas:first_name>
+      <cas:last_name>Chen</cas:last_name>
+      <cas:email>root@leo108.com</cas:email>
+    </cas:attributes>
+    <cas:proxyGrantingTicket>pgtiou string</cas:proxyGrantingTicket>
+  </cas:authenticationSuccess>
+</cas:serviceResponse>

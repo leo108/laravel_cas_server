@@ -1,0 +1,8 @@
+{
+    "serviceResponse": {
+        "authenticationFailure": {
+            "code": "INVALID_REQUEST",
+            "description": "param service and ticket can not be empty"
+        }
+    }
+}

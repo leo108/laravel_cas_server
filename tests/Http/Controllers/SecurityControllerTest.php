@@ -1,404 +1,350 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/12
- * Time: 14:50
- */
 
-namespace Leo108\CAS {
+namespace Leo108\Cas\Tests\Http\Controllers;
 
-    use Leo108\CAS\Http\Controllers\SecurityControllerTest;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Event;
+use function Leo108\Cas\cas_route;
+use Leo108\Cas\Contracts\Interactions\UserLogin;
+use Leo108\Cas\Events\CasUserLoginEvent;
+use Leo108\Cas\Events\CasUserLogoutEvent;
+use Leo108\Cas\Exceptions\CasException;
+use Leo108\Cas\Models\Ticket;
+use Leo108\Cas\Repositories\PGTicketRepository;
+use Leo108\Cas\Repositories\ServiceRepository;
+use Leo108\Cas\Repositories\TicketRepository;
+use Leo108\Cas\Tests\Support\User;
+use Leo108\Cas\Tests\TestCase;
+use Mockery;
 
-    //mock function
-    function cas_route($name, $query)
+class SecurityControllerTest extends TestCase
+{
+    public function testShowLoginWithValidServiceUrl()
     {
-        return SecurityControllerTest::$functions->cas_route($name, $query);
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
+
+        $this->mock(UserLogin::class)
+            ->shouldReceive('showLoginPage')
+            ->withAnyArgs()
+            ->andReturn(new Response('show login page'))
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(null)
+            ->once();
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com']));
+        $this->assertEquals('show login page', $resp->getContent());
     }
-}
 
-namespace Leo108\CAS\Http\Controllers {
-
-    use Illuminate\Http\RedirectResponse;
-    use Illuminate\Http\Request;
-    use Leo108\CAS\Contracts\Interactions\UserLogin;
-    use Leo108\CAS\Contracts\Models\UserModel;
-    use Leo108\CAS\Events\CasUserLoginEvent;
-    use Leo108\CAS\Events\CasUserLogoutEvent;
-    use Leo108\CAS\Exceptions\CAS\CasException;
-    use Leo108\CAS\Repositories\PGTicketRepository;
-    use Leo108\CAS\Repositories\ServiceRepository;
-    use Leo108\CAS\Repositories\TicketRepository;
-    use TestCase;
-    use Mockery;
-
-    class SecurityControllerTest extends TestCase
+    public function testShowLoginWithInvalidServiceUrl()
     {
-        public static $functions;
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(false)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('showLoginPage')
+            ->with(Mockery::any(), [CasException::INVALID_SERVICE])
+            ->andReturn(new Response('show login page'))
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(null)
+            ->once();
 
-        public function setUp()
-        {
-            parent::setUp();
-            self::$functions = Mockery::mock();
-        }
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com']));
+        $this->assertEquals('show login page', $resp->getContent());
+    }
 
-        public function testShowLoginWithValidServiceUrl()
-        {
-            $request           = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('what ever')
-                ->once()
-                ->getMock();
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(true)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('showLoginPage')
-                ->with($request, [])
-                ->andReturn('show login called')
-                ->once()
-                ->shouldReceive('getCurrentUser')
-                ->andReturn(false)
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $this->assertEquals('show login called', app(SecurityController::class)->showLogin($request));
-        }
+    public function testShowLoginWhenLoggedInWithValidServiceUrlWithoutWarn()
+    {
+        Event::fake();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
 
-        public function testShowLoginWithInvalidServiceUrl()
-        {
-            $request           = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('what ever')
-                ->once()
-                ->getMock();
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(false)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('showLoginPage')
-                ->with($request, [CasException::INVALID_SERVICE])
-                ->andReturn('show login called')
-                ->once()
-                ->shouldReceive('getCurrentUser')
-                ->andReturn(false)
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
+        $user = new User();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn($user)
+            ->once()
+            ->getMock();
 
-            $this->assertEquals('show login called', app(SecurityController::class)->showLogin($request));
-        }
+        $ticket = new Ticket(['ticket' => '123456']);
 
-        public function testShowLoginWhenLoggedInWithValidServiceUrlWithoutWarn()
-        {
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(true)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $user             = Mockery::mock(UserModel::class);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('getCurrentUser')
-                ->andReturn($user)
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request    = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('what ever')
-                ->once()
-                ->shouldReceive('get')
-                ->withArgs(['warn'])
-                ->andReturn(false)
-                ->once()
-                ->getMock();
-            $controller = $this->initController()
-                ->makePartial()
-                ->shouldReceive('authenticated')
-                ->withArgs([$request, $user])
-                ->andReturn('authenticated called')
-                ->once()
-                ->getMock();
-            $this->assertEquals('authenticated called', $controller->showLogin($request));
-        }
+        $this->mock(TicketRepository::class)
+            ->shouldReceive('applyTicket')
+            ->with($user, 'https://leo108.com/?foo=bar')
+            ->andReturn($ticket)
+            ->once();
 
-        public function testShowLoginWhenLoggedInWithValidServiceUrlWithWarn()
-        {
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(true)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $ticketRepository = Mockery::mock(TicketRepository::class);
-            app()->instance(TicketRepository::class, $ticketRepository);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('getCurrentUser')
-                ->andReturn(true)//just not false is OK
-                ->once()
-                ->shouldReceive('showLoginWarnPage')
-                ->andReturn('showLoginWarnPage called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request        = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('what ever')
-                ->once()
-                ->shouldReceive('get')
-                ->withArgs(['warn'])
-                ->andReturn('true')
-                ->once()
-                ->getMock();
-            $request->query = Mockery::mock()
-                ->shouldReceive('all')
-                ->andReturn([])
-                ->once()
-                ->getMock();
-            self::$functions->shouldReceive('cas_route')->andReturn('some string')->once();
-            $this->assertEquals('showLoginWarnPage called', app(SecurityController::class)->showLogin($request));
-        }
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com/?foo=bar', 'warn' => 'false']));
+        $resp->assertRedirect('https://leo108.com/?foo=bar&ticket=123456');
 
-        public function testShowLoginWhenLoggedInWithInvalidServiceUrl()
-        {
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(false)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $ticketRepository = Mockery::mock(TicketRepository::class);
-            app()->instance(TicketRepository::class, $ticketRepository);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('getCurrentUser')
-                ->andReturn(true)//just not false is OK
-                ->once()
-                ->shouldReceive('redirectToHome')
-                ->with([CasException::INVALID_SERVICE])
-                ->andReturn('redirectToHome called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('what ever')
-                ->once()
-                ->getMock();
-            $this->assertEquals('redirectToHome called', app(SecurityController::class)->showLogin($request));
-        }
+        Event::assertDispatched(CasUserLoginEvent::class);
+    }
 
-        public function testAuthenticatedWithoutService()
-        {
-            $user             = Mockery::mock(UserModel::class);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('redirectToHome')
-                ->andReturn('redirectToHome called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('')
-                ->once()
-                ->getMock();
-            $this->expectsEvents(CasUserLoginEvent::class);
-            $this->assertEquals('redirectToHome called',
-                app(SecurityController::class)->authenticated($request, $user));
-        }
+    public function testShowLoginWhenLoggedInWithValidServiceUrlWithWarn()
+    {
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
 
-        public function testAuthenticatedWithService()
-        {
-            //with service url but apply ticket failed
-            $user             = Mockery::mock(UserModel::class);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('redirectToHome')
-                ->with([CasException::INTERNAL_ERROR])
-                ->andReturn('redirectToHome called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $ticketRepository = Mockery::mock(TicketRepository::class)
-                ->shouldReceive('applyTicket')
-                ->andThrow(new CasException(CasException::INTERNAL_ERROR))
-                ->once()
-                ->getMock();
-            app()->instance(TicketRepository::class, $ticketRepository);
-            $request = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('http://leo108.com')
-                ->once()
-                ->getMock();
-            $this->expectsEvents(CasUserLoginEvent::class);
-            $this->assertEquals('redirectToHome called',
-                app(SecurityController::class)->authenticated($request, $user));
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once()
+            ->shouldReceive('showLoginWarnPage')
+            ->with(Mockery::any(), cas_route('login.get', ['service' => 'https://leo108.com/?foo=bar']), 'https://leo108.com/?foo=bar')
+            ->andReturn(new Response('showLoginWarnPage'))
+            ->once();
 
-            //with service url
-            $ticket           = Mockery::mock();
-            $ticket->ticket   = 'ST-abc';
-            $ticketRepository = Mockery::mock(TicketRepository::class)
-                ->shouldReceive('applyTicket')
-                ->andReturn($ticket)
-                ->once()
-                ->getMock();
-            app()->instance(TicketRepository::class, $ticketRepository);
-            $request = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service', ''])
-                ->andReturn('http://leo108.com')
-                ->once()
-                ->getMock();
-            $this->expectsEvents(CasUserLoginEvent::class);
-            $resp = app(SecurityController::class)->authenticated($request, $user);
-            $this->assertInstanceOf(RedirectResponse::class, $resp);
-            $this->assertEquals($resp->getTargetUrl(), 'http://leo108.com?ticket=ST-abc');
-        }
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com/?foo=bar', 'warn' => 'true']));
+        $this->assertEquals('showLoginWarnPage', $resp->getContent());
+    }
 
-        public function testLogoutWhenNotLoggedInWithoutService()
-        {
-            $request          = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service'])
-                ->andReturn(null)
-                ->once()
-                ->getMock();
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('getCurrentUser')
-                ->andReturn(false)
-                ->once()
-                ->shouldReceive('showLoggedOut')
-                ->with($request)
-                ->andReturn('showLoggedOut called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $this->doesntExpectEvents(CasUserLogoutEvent::class);
-            $this->assertEquals('showLoggedOut called', app(SecurityController::class)->logout($request));
-        }
+    public function testShowLoginWhenLoggedInWithInvalidServiceUrl()
+    {
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(false)
+            ->once();
 
-        public function testLogoutWithoutService()
-        {
-            $user             = Mockery::mock(UserModel::class);
-            $request          = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service'])
-                ->andReturn(null)
-                ->once()
-                ->getMock();
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('logout')
-                ->once()
-                ->shouldReceive('getCurrentUser')
-                ->andReturn($user)
-                ->once()
-                ->shouldReceive('showLoggedOut')
-                ->with($request)
-                ->andReturn('showLoggedOut called')
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
-                ->shouldReceive('invalidTicketByUser')
-                ->with($user)
-                ->once()
-                ->getMock();
-            app()->instance(PGTicketRepository::class, $pgTicketRepository);
-            $this->expectsEvents(CasUserLogoutEvent::class);
-            $this->assertEquals('showLoggedOut called', app(SecurityController::class)->logout($request));
-        }
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once()
+            ->shouldReceive('redirectToHome')
+            ->with([CasException::INVALID_SERVICE])
+            ->andReturn(new Response('redirectToHome'))
+            ->once();
 
-        public function testLogoutWithValidService()
-        {
-            $user              = Mockery::mock(UserModel::class);
-            $serviceRepository = Mockery::mock(ServiceRepository::class)
-                ->shouldReceive('isUrlValid')
-                ->andReturn(true)
-                ->once()
-                ->getMock();
-            app()->instance(ServiceRepository::class, $serviceRepository);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('logout')
-                ->once()
-                ->shouldReceive('getCurrentUser')
-                ->andReturn($user)
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request            = Mockery::mock(Request::class)
-                ->shouldReceive('get')
-                ->withArgs(['service'])
-                ->andReturn('http://leo108.com')
-                ->once()
-                ->getMock();
-            $pgTicketRepository = Mockery::mock(PGTicketRepository::class)
-                ->shouldReceive('invalidTicketByUser')
-                ->with($user)
-                ->once()
-                ->getMock();
-            app()->instance(PGTicketRepository::class, $pgTicketRepository);
-            $this->expectsEvents(CasUserLogoutEvent::class);
-            $resp = app(SecurityController::class)->logout($request);
-            $this->assertInstanceOf(RedirectResponse::class, $resp);
-        }
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com/']));
+        $this->assertEquals('redirectToHome', $resp->getContent());
+    }
 
-        public function testLogin()
-        {
-            $request          = Mockery::mock(Request::class);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('login')
-                ->andReturn(null)
-                ->once()
-                ->shouldReceive('showAuthenticateFailed')
-                ->andReturn('showAuthenticateFailed called')
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $this->assertEquals('showAuthenticateFailed called', app(SecurityController::class)->login($request));
+    public function testAuthenticatedWithoutService()
+    {
+        Event::fake();
 
-            $user             = Mockery::mock(UserModel::class);
-            $loginInteraction = Mockery::mock(UserLogin::class)
-                ->shouldReceive('login')
-                ->andReturn($user)
-                ->once()
-                ->getMock();
-            app()->instance(UserLogin::class, $loginInteraction);
-            $request    = Mockery::mock(Request::class);
-            $controller = $this->initController()
-                ->makePartial()
-                ->shouldReceive('authenticated')
-                ->withArgs([$request, $user])
-                ->andReturn('authenticated called')
-                ->once()
-                ->getMock();
-            $this->assertEquals('authenticated called', $controller->login($request));
-        }
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once()
+            ->shouldReceive('redirectToHome')
+            ->andReturn(new Response('redirectToHome'))
+            ->once();
 
-        /**
-         * @return Mockery\MockInterface
-         */
-        protected function initController()
-        {
-            return Mockery::mock(
-                SecurityController::class,
-                [
-                    app(ServiceRepository::class),
-                    app(TicketRepository::class),
-                    app(PGTicketRepository::class),
-                    app(UserLogin::class),
-                ]
-            );
-        }
+        $resp = $this->get(cas_route('login.get', ['service' => '']));
+        $this->assertEquals('redirectToHome', $resp->getContent());
+
+        Event::assertDispatched(CasUserLoginEvent::class);
+    }
+
+    public function testAuthenticatedWithServiceFailed()
+    {
+        Event::fake();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once()
+            ->shouldReceive('redirectToHome')
+            ->with([CasException::INTERNAL_ERROR])
+            ->andReturn(new Response('redirectToHome'))
+            ->once();
+        $this->mock(TicketRepository::class)
+            ->shouldReceive('applyTicket')
+            ->andThrow(new CasException(CasException::INTERNAL_ERROR))
+            ->once();
+
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com']));
+        $this->assertEquals('redirectToHome', $resp->getContent());
+
+        Event::assertDispatched(CasUserLoginEvent::class);
+    }
+
+    public function testAuthenticatedWithServiceSuccess()
+    {
+        Event::fake();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(new User())
+            ->once();
+        $ticket = new Ticket();
+        $ticket->ticket = 'ST-abc';
+        $this->mock(TicketRepository::class)
+            ->shouldReceive('applyTicket')
+            ->andReturn($ticket)
+            ->once();
+
+        $resp = $this->get(cas_route('login.get', ['service' => 'https://leo108.com']));
+        $resp->assertRedirect('https://leo108.com?ticket=ST-abc');
+
+        Event::assertDispatched(CasUserLoginEvent::class);
+    }
+
+    public function testLogoutWhenNotLoggedInWithoutService()
+    {
+        $this->mock(UserLogin::class)
+            ->shouldReceive('getCurrentUser')
+            ->andReturn(null)
+            ->once()
+            ->shouldReceive('showLoggedOut')
+            ->andReturn(new Response('showLoggedOut'))
+            ->once();
+
+        Event::fake();
+        $resp = $this->get(cas_route('logout'));
+        $this->assertEquals('showLoggedOut', $resp->getContent());
+        Event::assertNotDispatched(CasUserLogoutEvent::class);
+    }
+
+    public function testLogoutWithoutService()
+    {
+        $user = $this->initUser();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('logout')
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn($user)
+            ->once()
+            ->shouldReceive('showLoggedOut')
+            ->andReturn(new Response('showLoggedOut'))
+            ->once();
+
+        $this->mock(PGTicketRepository::class)
+            ->shouldReceive('invalidTicketByUser')
+            ->with($user)
+            ->once();
+
+        Event::fake();
+        $resp = $this->get(cas_route('logout'));
+        $this->assertEquals('showLoggedOut', $resp->getContent());
+        Event::assertDispatched(CasUserLogoutEvent::class);
+    }
+
+    public function testLogoutWithValidService()
+    {
+        $user = $this->initUser();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('logout')
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn($user)
+            ->once();
+        $this->mock(PGTicketRepository::class)
+            ->shouldReceive('invalidTicketByUser')
+            ->with($user)
+            ->once()
+            ->getMock();
+        Event::fake();
+        $resp = $this->get(cas_route('logout', ['service' => 'https://leo108.com']));
+        $resp->assertRedirect('https://leo108.com');
+        Event::assertDispatched(CasUserLogoutEvent::class);
+    }
+
+    public function testLogoutWithInvalidService()
+    {
+        $user = $this->initUser();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(false)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('logout')
+            ->once()
+            ->shouldReceive('getCurrentUser')
+            ->andReturn($user)
+            ->once()
+            ->shouldReceive('showLoggedOut')
+            ->andReturn(new Response('showLoggedOut'))
+            ->once();
+        $this->mock(PGTicketRepository::class)
+            ->shouldReceive('invalidTicketByUser')
+            ->with($user)
+            ->once()
+            ->getMock();
+        Event::fake();
+        $resp = $this->get(cas_route('logout', ['service' => 'https://leo108.com']));
+        $this->assertEquals('showLoggedOut', $resp->getContent());
+        Event::assertDispatched(CasUserLogoutEvent::class);
+    }
+
+    public function testLoginFailed()
+    {
+        $this->mock(UserLogin::class)
+            ->shouldReceive('login')
+            ->andReturn(null)
+            ->once()
+            ->shouldReceive('showAuthenticateFailed')
+            ->andReturn(new Response('showAuthenticateFailed'))
+            ->once();
+        $resp = $this->post(cas_route('login.post'));
+        $this->assertEquals('showAuthenticateFailed', $resp->getContent());
+    }
+
+    public function testLoginSuccessWithInvalidService()
+    {
+        $user = $this->initUser();
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(false)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('redirectToHome')
+            ->with([CasException::INVALID_SERVICE])
+            ->andReturn(new Response('redirectToHome'))
+            ->once()
+            ->shouldReceive('login')
+            ->andReturn($user)
+            ->once();
+        $resp = $this->post(cas_route('login.post', ['service' => 'https://leo108.com']));
+        $this->assertEquals('redirectToHome', $resp->getContent());
+    }
+
+    public function testLoginSuccessWithValidService()
+    {
+        $user = $this->initUser();
+        $ticket = new Ticket(['ticket' => '123456']);
+        $this->mock(ServiceRepository::class)
+            ->shouldReceive('isUrlValid')
+            ->andReturn(true)
+            ->once();
+        $this->mock(UserLogin::class)
+            ->shouldReceive('login')
+            ->andReturn($user)
+            ->once();
+        $this->mock(TicketRepository::class)
+            ->shouldReceive('applyTicket')
+            ->andReturn($ticket)
+            ->once();
+
+        Event::fake();
+        $resp = $this->post(cas_route('login.post', ['service' => 'https://leo108.com']));
+        $resp->assertRedirect('https://leo108.com?ticket=123456');
+        Event::assertDispatched(CasUserLoginEvent::class);
+    }
+
+    protected function initUser(): User
+    {
+        $user = new User(['first_name' => 'Leo', 'last_name' => 'Chen', 'email' => 'root@leo108.com']);
+        $user->save();
+
+        return $user;
     }
 }

@@ -6,18 +6,18 @@
  * Time: 16:25
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\AuthenticationFailureResponse;
+use Leo108\Cas\Contracts\Responses\AuthenticationFailureResponse;
 
 class XmlAuthenticationFailureResponse extends BaseXmlResponse implements AuthenticationFailureResponse
 {
     /**
-     * @param string $code
-     * @param string $description
-     * @return $this
+     * @param  string  $code
+     * @param  string  $description
+     * @return static
      */
-    public function setFailure($code, $description)
+    public function setFailure(string $code, string $description): static
     {
         $this->removeByXPath($this->node, 'cas:authenticationFailure');
         $authNode = $this->node->addChild('cas:authenticationFailure', $description);

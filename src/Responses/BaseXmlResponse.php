@@ -6,7 +6,7 @@
  * Time: 15:10
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
 use Illuminate\Support\Str;
 use SimpleXMLElement;
@@ -14,48 +14,45 @@ use Symfony\Component\HttpFoundation\Response;
 
 class BaseXmlResponse
 {
-    /**
-     * @var SimpleXMLElement
-     */
-    protected $node;
+    protected SimpleXMLElement $node;
 
-    /**
-     * BaseXmlResponse constructor.
-     */
     public function __construct()
     {
         $this->node = $this->getRootNode();
     }
 
-    /**
-     * @return SimpleXMLElement
-     */
-    protected function getRootNode()
+    protected function getRootNode(): SimpleXMLElement
     {
-        return simplexml_load_string('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
+        return \Safe\simplexml_load_string('<cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas"/>');
     }
 
-    /**
-     * @param SimpleXMLElement $xml
-     * @param string           $xpath
-     */
-    protected function removeByXPath(SimpleXMLElement $xml, $xpath)
+    protected function removeByXPath(SimpleXMLElement $xml, string $xpath): void
     {
         $nodes = $xml->xpath($xpath);
+
+        if ($nodes === null || $nodes === false) {
+            return;
+        }
+
         foreach ($nodes as $node) {
             $dom = dom_import_simplexml($node);
-            $dom->parentNode->removeChild($dom);
+
+            if ($dom->parentNode !== null) {
+                $dom->parentNode->removeChild($dom);
+            }
         }
     }
 
     /**
      * remove the first line of xml string
-     * @param string $str
+     *
+     * @param  string  $str
      * @return string
      */
-    protected function removeXmlFirstLine($str)
+    protected function removeXmlFirstLine(string $str): string
     {
         $first = '<?xml version="1.0"?>';
+
         if (Str::startsWith($str, $first)) {
             return trim(substr($str, strlen($first)));
         }
@@ -63,33 +60,26 @@ class BaseXmlResponse
         return $str;
     }
 
-    /**
-     * @param mixed $value
-     * @return false|string
-     */
-    protected function stringify($value)
+    protected function stringify(mixed $value): string
     {
         if (is_string($value)) {
             $str = $value;
-        } else if (is_object($value) && method_exists($value, '__toString')) {
-            $str = $value->__toString();
-        } else if ($value instanceof \Serializable) {
-            $str = serialize($value);
         } else {
-            //array or object that doesn't have __toString method
-            //json_encode will return false if encode failed
-            $str = json_encode($value);
+            $str = \Safe\json_encode($value);
         }
 
         return $str;
     }
 
-    /**
-     * @return Response
-     */
-    public function toResponse()
+    public function toResponse(): Response
     {
-        $content = $this->removeXmlFirstLine($this->node->asXML());
+        $xml = $this->node->asXML();
+
+        if ($xml === false) {
+            throw new \RuntimeException('Failed to generate xml');
+        }
+
+        $content = $this->removeXmlFirstLine($xml);
 
         return new Response($content, 200, ['Content-Type' => 'application/xml']);
     }

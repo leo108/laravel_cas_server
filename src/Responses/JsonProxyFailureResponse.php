@@ -6,9 +6,9 @@
  * Time: 17:47
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\ProxyFailureResponse;
+use Leo108\Cas\Contracts\Responses\ProxyFailureResponse;
 
 class JsonProxyFailureResponse extends BaseJsonResponse implements ProxyFailureResponse
 {
@@ -20,14 +20,9 @@ class JsonProxyFailureResponse extends BaseJsonResponse implements ProxyFailureR
         $this->data = ['serviceResponse' => ['proxyFailure' => []]];
     }
 
-    /**
-     * @param string $code
-     * @param string $description
-     * @return $this
-     */
-    public function setFailure($code, $description)
+    public function setFailure(string $code, string $description): static
     {
-        $this->data['serviceResponse']['proxyFailure']['code']        = $code;
+        $this->data['serviceResponse']['proxyFailure']['code'] = $code;
         $this->data['serviceResponse']['proxyFailure']['description'] = $description;
 
         return $this;

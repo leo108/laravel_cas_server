@@ -1,36 +1,31 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/27
- * Time: 07:08
- */
 
-namespace Leo108\CAS\Services;
+namespace Leo108\Cas\Tests\Services;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
-use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Middleware;
-use TestCase;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
+use Leo108\Cas\Services\PGTCaller;
+use Leo108\Cas\Tests\TestCase;
 
 class PGTCallerTest extends TestCase
 {
     public function testCall()
     {
-        $mock      = new MockHandler(
+        $mock = new MockHandler(
             [
                 new Response(200),
                 new Response(404),
             ]
         );
         $container = [];
-        $history   = Middleware::history($container);
-        $handler   = HandlerStack::create($mock);
+        $history = Middleware::history($container);
+        $handler = HandlerStack::create($mock);
         $handler->push($history);
-        app()->instance(Client::class, new Client(['handler' => $handler]));
+        $this->instance(Client::class, new Client(['handler' => $handler]));
 
         $call = app(PGTCaller::class);
         $this->assertTrue($call->call('https://leo108.com/callback?a=1', 'pgt', 'pgtiou'));

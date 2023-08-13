@@ -1,14 +1,9 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/25
- * Time: 14:40
- */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
-use TestCase;
+use Leo108\Cas\Responses\JsonAuthenticationSuccessResponse;
+use Leo108\Cas\Tests\TestCase;
 
 class JsonAuthenticationSuccessResponseTest extends TestCase
 {
@@ -42,7 +37,7 @@ class JsonAuthenticationSuccessResponseTest extends TestCase
 
     public function testSetProxies()
     {
-        $resp     = new JsonAuthenticationSuccessResponse();
+        $resp = new JsonAuthenticationSuccessResponse();
         $proxies1 = ['http://proxy1.com', 'http://proxy2.com'];
         $resp->setProxies($proxies1);
         $data = $this->getData($resp);
@@ -56,7 +51,7 @@ class JsonAuthenticationSuccessResponseTest extends TestCase
 
     public function testSetAttributes()
     {
-        $resp  = new JsonAuthenticationSuccessResponse();
+        $resp = new JsonAuthenticationSuccessResponse();
         $attr1 = ['key1' => 'value1', 'key2' => 'value2'];
         $resp->setAttributes($attr1);
         $data = $this->getData($resp);
@@ -70,7 +65,7 @@ class JsonAuthenticationSuccessResponseTest extends TestCase
 
     public function testSetMultiValuedAttributes()
     {
-        $resp  = new JsonAuthenticationSuccessResponse();
+        $resp = new JsonAuthenticationSuccessResponse();
         $attr1 = ['key1' => ['value1', 'value2']];
         $resp->setAttributes($attr1);
         $data = $this->getData($resp);

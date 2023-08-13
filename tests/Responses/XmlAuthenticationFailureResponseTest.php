@@ -1,40 +1,35 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leo108
- * Date: 2016/10/25
- * Time: 13:29
- */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Tests\Responses;
 
-use TestCase;
+use Leo108\Cas\Responses\XmlAuthenticationFailureResponse;
+use Leo108\Cas\Tests\TestCase;
 
 class XmlAuthenticationFailureResponseTest extends TestCase
 {
     public function testSetFailure()
     {
-        $resp    = new XmlAuthenticationFailureResponse();
+        $resp = new XmlAuthenticationFailureResponse();
         $content = $this->getXML($resp);
-        $this->assertNotContains('cas:authenticationFailure', $content);
+        $this->assertStringNotContainsString('cas:authenticationFailure', $content);
         $resp->setFailure('code1', 'desc1');
         $content = $this->getXML($resp);
-        $this->assertContains('cas:authenticationFailure', $content);
-        $this->assertContains('code1', $content);
-        $this->assertContains('desc1', $content);
+        $this->assertStringContainsString('cas:authenticationFailure', $content);
+        $this->assertStringContainsString('code1', $content);
+        $this->assertStringContainsString('desc1', $content);
         $resp->setFailure('code2', 'desc2');
         $content = $this->getXML($resp);
-        $this->assertContains('cas:authenticationFailure', $content);
-        $this->assertNotContains('code1', $content);
-        $this->assertContains('code2', $content);
-        $this->assertNotContains('desc1', $content);
-        $this->assertContains('desc2', $content);
+        $this->assertStringContainsString('cas:authenticationFailure', $content);
+        $this->assertStringNotContainsString('code1', $content);
+        $this->assertStringContainsString('code2', $content);
+        $this->assertStringNotContainsString('desc1', $content);
+        $this->assertStringContainsString('desc2', $content);
     }
 
     protected function getXML(XmlAuthenticationFailureResponse $resp)
     {
         $property = self::getNonPublicProperty($resp, 'node');
-        $node     = $property->getValue($resp);
+        $node = $property->getValue($resp);
 
         return $node->asXML();
     }

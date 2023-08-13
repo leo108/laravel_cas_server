@@ -6,14 +6,14 @@
  * Time: 16:20
  */
 
-namespace Leo108\CAS\Contracts\Responses;
+namespace Leo108\Cas\Contracts\Responses;
 
 use Symfony\Component\HttpFoundation\Response;
 
 interface BaseResponse
 {
     /**
-     * @return Response
+     * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function toResponse();
+    public function toResponse(): Response;
 }

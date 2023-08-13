@@ -6,9 +6,9 @@
  * Time: 18:19
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\ProxySuccessResponse;
+use Leo108\Cas\Contracts\Responses\ProxySuccessResponse;
 use SimpleXMLElement;
 
 class XmlProxySuccessResponse extends BaseXmlResponse implements ProxySuccessResponse
@@ -23,10 +23,10 @@ class XmlProxySuccessResponse extends BaseXmlResponse implements ProxySuccessRes
     }
 
     /**
-     * @param string $ticket
-     * @return $this
+     * @param  string  $ticket
+     * @return static
      */
-    public function setProxyTicket($ticket)
+    public function setProxyTicket(string $ticket): static
     {
         $proxyNode = $this->getProxyNode();
         $this->removeByXPath($proxyNode, 'cas:proxyTicket');
@@ -35,13 +35,11 @@ class XmlProxySuccessResponse extends BaseXmlResponse implements ProxySuccessRes
         return $this;
     }
 
-    /**
-     * @return SimpleXMLElement
-     */
-    public function getProxyNode()
+    public function getProxyNode(): SimpleXMLElement
     {
         $authNodes = $this->node->xpath('cas:proxySuccess');
-        if (count($authNodes) < 1) {
+
+        if ($authNodes === null || $authNodes === false || count($authNodes) < 1) {
             return $this->node->addChild('cas:proxySuccess');
         }
 

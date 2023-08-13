@@ -6,9 +6,9 @@
  * Time: 15:57
  */
 
-namespace Leo108\CAS\Responses;
+namespace Leo108\Cas\Responses;
 
-use Leo108\CAS\Contracts\Responses\AuthenticationSuccessResponse;
+use Leo108\Cas\Contracts\Responses\AuthenticationSuccessResponse;
 
 class JsonAuthenticationSuccessResponse extends BaseJsonResponse implements AuthenticationSuccessResponse
 {
@@ -20,28 +20,28 @@ class JsonAuthenticationSuccessResponse extends BaseJsonResponse implements Auth
         $this->data = ['serviceResponse' => ['authenticationSuccess' => []]];
     }
 
-    public function setUser($user)
+    public function setUser(string $user): static
     {
         $this->data['serviceResponse']['authenticationSuccess']['user'] = $user;
 
         return $this;
     }
 
-    public function setProxies($proxies)
+    public function setProxies(array $proxies): static
     {
         $this->data['serviceResponse']['authenticationSuccess']['proxies'] = $proxies;
 
         return $this;
     }
 
-    public function setAttributes($attributes)
+    public function setAttributes(array $attributes): static
     {
         $this->data['serviceResponse']['authenticationSuccess']['attributes'] = $attributes;
 
         return $this;
     }
 
-    public function setProxyGrantingTicket($ticket)
+    public function setProxyGrantingTicket(string $ticket): static
     {
         $this->data['serviceResponse']['authenticationSuccess']['proxyGrantingTicket'] = $ticket;
 

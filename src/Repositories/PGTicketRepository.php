@@ -6,94 +6,79 @@
  * Time: 16:34
  */
 
-namespace Leo108\CAS\Repositories;
+namespace Leo108\Cas\Repositories;
 
-use Carbon\Carbon;
-use Leo108\CAS\Contracts\Models\UserModel;
-use Leo108\CAS\Exceptions\CAS\CasException;
-use Leo108\CAS\Models\PGTicket;
-use Leo108\CAS\Services\TicketGenerator;
+use Leo108\Cas\Contracts\Models\UserModel;
+use Leo108\Cas\Exceptions\CasException;
+use Leo108\Cas\Models\PGTicket;
+use Leo108\Cas\Services\CasConfig;
+use Leo108\Cas\Services\TicketGenerator;
 
 class PGTicketRepository
 {
-    /**
-     * @var PGTicket
-     */
-    protected $pgTicket;
-    /**
-     * @var ServiceRepository
-     */
-    protected $serviceRepository;
+    protected PGTicket $pgTicket;
+    protected ServiceRepository $serviceRepository;
+    protected TicketGenerator $ticketGenerator;
+    protected CasConfig $casConfig;
 
-    /**
-     * @var TicketGenerator
-     */
-    protected $ticketGenerator;
-
-    /**
-     * PGTicketRepository constructor.
-     * @param PGTicket          $pgTicket
-     * @param ServiceRepository $serviceRepository
-     * @param TicketGenerator   $ticketGenerator
-     */
     public function __construct(
         PGTicket $pgTicket,
         ServiceRepository $serviceRepository,
-        TicketGenerator $ticketGenerator
+        TicketGenerator $ticketGenerator,
+        CasConfig $casConfig
     ) {
-        $this->pgTicket          = $pgTicket;
+        $this->pgTicket = $pgTicket;
         $this->serviceRepository = $serviceRepository;
-        $this->ticketGenerator   = $ticketGenerator;
+        $this->ticketGenerator = $ticketGenerator;
+        $this->casConfig = $casConfig;
     }
 
     /**
-     * @param string $ticket
-     * @param bool   $checkExpired
+     * @param  string  $ticket
+     * @param  bool  $checkExpired
      * @return null|PGTicket
      */
-    public function getByTicket($ticket, $checkExpired = true)
+    public function getByTicket(string $ticket, bool $checkExpired = true): ?PGTicket
     {
-        $record = $this->pgTicket->where('ticket', $ticket)->first();
-        if (!$record) {
+        $record = $this->pgTicket->newQuery()->where('ticket', $ticket)->first();
+        if ($record === null) {
             return null;
         }
 
         return ($checkExpired && $record->isExpired()) ? null : $record;
     }
 
-    /**
-     * @param UserModel $user
-     */
-    public function invalidTicketByUser(UserModel $user)
+    public function invalidTicketByUser(UserModel $user): void
     {
         $this->pgTicket->where('user_id', $user->getEloquentModel()->getKey())->delete();
     }
 
     /**
-     * @param UserModel $user
-     * @param string    $pgtUrl
-     * @param array     $proxies
-     * @return PGTicket
-     * @throws CasException
+     * @param  \Leo108\Cas\Contracts\Models\UserModel  $user
+     * @param  string  $pgtUrl
+     * @param  list<string>  $proxies
+     * @return \Leo108\Cas\Models\PGTicket
+     *
+     * @throws \Leo108\Cas\Exceptions\CasException
      */
-    public function applyTicket(UserModel $user, $pgtUrl, $proxies = [])
+    public function applyTicket(UserModel $user, string $pgtUrl, array $proxies = []): PGTicket
     {
         $service = $this->serviceRepository->getServiceByUrl($pgtUrl);
-        if (!$service || !$service->allow_proxy) {
+        if ($service === null || ! $service->allow_proxy) {
             throw new CasException(CasException::UNAUTHORIZED_SERVICE_PROXY);
         }
 
-        $ticket = $this->getAvailableTicket(config('cas.pg_ticket_len', 64));
+        $ticket = $this->getAvailableTicket($this->casConfig->pg_ticket_len);
         if ($ticket === false) {
             throw new CasException(CasException::INTERNAL_ERROR, 'apply proxy-granting ticket failed');
         }
         $record = $this->pgTicket->newInstance(
             [
-                'ticket'     => $ticket,
-                'expire_at'  => new Carbon(sprintf('+%dsec', config('cas.pg_ticket_expire', 7200))),
-                'created_at' => new Carbon(),
-                'pgt_url'    => $pgtUrl,
-                'proxies'    => $proxies,
+                'ticket' => $ticket,
+                'expire_at' => now()->addSeconds($this->casConfig->pg_ticket_expire),
+                'created_at' => now(),
+                'pgt_url' => $pgtUrl,
+                'proxies' => $proxies,
             ]
         );
         $record->user()->associate($user->getEloquentModel());
@@ -103,16 +88,12 @@ class PGTicketRepository
         return $record;
     }
 
-    /**
-     * @param string $totalLength
-     * @return string|false
-     */
-    protected function getAvailableTicket($totalLength)
+    protected function getAvailableTicket(int $totalLength): string|false
     {
         return $this->ticketGenerator->generate(
             $totalLength,
             'PGT-',
-            function ($ticket) {
+            function (string $ticket): bool {
                 return is_null($this->getByTicket($ticket, false));
             },
             10
