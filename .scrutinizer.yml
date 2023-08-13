@@ -7,7 +7,7 @@ build:
   tests:
     override:
       -
-        command: 'composer phpunit -- --coverage-clover=.coverage.xml'
+        command: 'XDEBUG_MODE=coverage composer phpunit -- --coverage-clover=.coverage.xml'
         coverage:
           file: '.coverage.xml'
           format: 'clover'

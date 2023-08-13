@@ -1,0 +1,21 @@
+name: PHP Composer
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Lint
+        run: composer pint -- --test
+
+      - name: Run test suite
+        run: composer phpunit
